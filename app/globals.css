@@ -566,7 +566,13 @@ body {
     padding-bottom: 88px;
   }
 
-  /* Touch targets: 44px floor for anything a finger has to hit. */
+  .platform-badge {
+    padding: 9px 14px;
+  }
+}
+
+/* Touch range: anything a finger has to hit gets a 44px floor. */
+@media (max-width: 1024px) {
   .recent-link {
     display: flex;
     align-items: center;
@@ -575,10 +581,6 @@ body {
 
   .download-btn {
     min-height: 44px;
-  }
-
-  .platform-badge {
-    padding: 9px 14px;
   }
 }
 
