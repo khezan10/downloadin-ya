@@ -1,12 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import IdleAnimations from '@/components/IdleAnimations'
+import Typewriter from '@/components/Typewriter'
 
 // Entrance animation: fade + rise + deblur, staggered per element.
 // Mirrors the Zanara landing page (.reveal / .in) but starts immediately on
 // mount instead of waiting for an IntersectionObserver, so nothing can get
 // stuck invisible.
 const REVEAL_STAGGER_MS = 90
+
+// The rotating lines the typewriter cycles through.
+const TAGLINES = [
+  'Paste a link from TikTok, Instagram, YouTube, Facebook, X or Threads and get the video straight away.',
+  'No login, no cookies, no API key — just paste the URL and press download.',
+  'HD, SD, MP3 — pick the quality that fits, up to six options per video.',
+  'Public posts only. Pinterest is on the way.',
+]
+
+const TITLE_TEXT = 'DOWNLOADIN YA'
 
 export default function Home() {
   const [url, setUrl] = useState('')
@@ -15,6 +27,10 @@ export default function Home() {
   const [result, setResult] = useState(null)
   const [recentDownloads, setRecentDownloads] = useState([])
   const [revealed, setRevealed] = useState(false)
+
+  const titleRef = useRef(null)
+  const eyebrowRef = useRef(null)
+  const cardRef = useRef(null)
 
   useEffect(() => {
     fetchRecentDownloads()
@@ -126,16 +142,25 @@ export default function Home() {
     <main>
       {/* Hero Section */}
       <section className="hero">
-        <p className={`eyebrow ${revealClass}`} {...reveal(0)}>
-          TikTok Downloader
+        <p className={`eyebrow ${revealClass}`} {...reveal(0)} ref={eyebrowRef}>
+          Social Video Downloader
         </p>
-        <h1 className={`title ${revealClass}`} {...reveal(1)}>
-          DOWNLOADIN YA<span className="caret">_</span>
+
+        <h1 className={`title ${revealClass}`} {...reveal(1)} ref={titleRef}>
+          <span className="title-text" aria-label={TITLE_TEXT}>
+            {TITLE_TEXT.split('').map((ch, i) => (
+              <span className="ch" key={i} aria-hidden="true">
+                {ch === ' ' ? '\u00a0' : ch}
+              </span>
+            ))}
+          </span>
+          <span className="caret" aria-hidden="true">
+            _
+          </span>
         </h1>
+
         <p className={`subtitle ${revealClass}`} {...reveal(2)}>
-          Paste a link from TikTok, Instagram, YouTube, Facebook, X (Twitter) or Threads
-          and get the video straight away. No login, no cookies, no API key. Pinterest
-          coming soon.
+          <Typewriter lines={TAGLINES} />
         </p>
 
         {/* Platform badges */}
@@ -150,24 +175,30 @@ export default function Home() {
         </div>
 
         {/* Download form */}
-        <form className={`download-form ${revealClass}`} {...reveal(4)} onSubmit={handleSubmit}>
-          <div className="input-wrapper">
-            <input
-              type="url"
-              className="url-input"
-              placeholder="Paste a TikTok, Instagram, YouTube, Facebook, X or Threads URL..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              disabled={loading}
-              spellCheck={false}
-            />
-            <button type="submit" className="submit-btn" disabled={loading || !url.trim()}>
-              {loading ? '...' : 'DOWNLOAD'}
-            </button>
-          </div>
+        <div
+          className={`download-card ${revealClass}`}
+          {...reveal(4)}
+          ref={cardRef}
+        >
+          <form className="download-form" onSubmit={handleSubmit}>
+            <div className="input-wrapper">
+              <input
+                type="url"
+                className="url-input"
+                placeholder="Paste a TikTok / Instagram / YouTube / FB / X URL..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                disabled={loading}
+                spellCheck={false}
+              />
+              <button type="submit" className="submit-btn" disabled={loading || !url.trim()}>
+                {loading ? '...' : 'DOWNLOAD'}
+              </button>
+            </div>
 
-          {error && <div className="error-msg">{error}</div>}
-        </form>
+            {error && <div className="error-msg">{error}</div>}
+          </form>
+        </div>
 
         {/* Loading */}
         {loading && (
@@ -291,11 +322,17 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="footer">
-        <span>Downloadin Ya — TikTok Downloader</span>
+        <span>Downloadin Ya — Social Video Downloader</span>
         <a href="https://github.com/khezan10/downloadin-ya" target="_blank" rel="noopener noreferrer">
           GitHub
         </a>
       </footer>
+
+      <IdleAnimations
+        titleRef={titleRef}
+        eyebrowRef={eyebrowRef}
+        cardRef={cardRef}
+      />
     </main>
   )
 }

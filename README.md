@@ -1,7 +1,8 @@
 # Downloadin Ya
 
-A TikTok video downloader. Paste a link, get the video in HD without a watermark.
-No login, no cookies, no API key.
+A social media video downloader. Paste a link from TikTok, Instagram, YouTube,
+Facebook, X (Twitter) or Threads and get the video — up to six quality options,
+plus MP3 audio. No login, no cookies, no API key.
 
 **Live:** https://downloadin-ya.vercel.app
 **Custom domain:** https://downloadin.mzg.my.id

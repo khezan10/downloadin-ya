@@ -6,6 +6,7 @@ export const metadata = {
     'Download videos from TikTok, Instagram, YouTube, Facebook, X (Twitter) and Threads. No login, no cookies, no API key. Pinterest coming soon.',
   keywords: [
     'video downloader',
+    'social media video downloader',
     'tiktok downloader',
     'instagram downloader',
     'instagram reels downloader',
