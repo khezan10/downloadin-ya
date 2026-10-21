@@ -3,7 +3,8 @@
 A TikTok video downloader. Paste a link, get the video in HD without a watermark.
 No login, no cookies, no API key.
 
-**Live:** https://downloadin-ya-mu.vercel.app
+**Live:** https://downloadin-ya.vercel.app
+**Custom domain:** https://downloadin.mzg.my.id
 
 ## Supported Platforms
 
