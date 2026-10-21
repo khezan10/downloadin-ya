@@ -110,6 +110,25 @@ body {
   color: var(--lime);
 }
 
+/* The one platform that is actually live. */
+.platform-badge--active {
+  border-color: var(--lime);
+  color: var(--lime);
+  background: rgba(180, 255, 43, 0.07);
+}
+
+/* Platforms on the roadmap — dimmed, not clickable. */
+.platform-badge.is-soon {
+  opacity: 0.45;
+  cursor: default;
+  border-style: dashed;
+}
+
+.platform-badge.is-soon:hover {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
 /* Download form */
 .download-form {
   width: 100%;
@@ -220,6 +239,31 @@ body {
   color: var(--muted);
 }
 
+/* Stats row under the result title. */
+.video-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.video-stat strong {
+  color: var(--lime);
+  font-weight: 400;
+}
+
+.download-btn--audio {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.download-btn--audio:hover {
+  border-color: var(--lime);
+  color: var(--lime);
+  background: rgba(180, 255, 43, 0.1);
+}
+
 .download-options {
   display: flex;
   flex-wrap: wrap;
@@ -326,6 +370,12 @@ body {
   color: var(--muted);
 }
 
+.recent-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
 /* Loading animation */
 .loading {
   display: flex;
@@ -385,18 +435,38 @@ body {
   50% { opacity: 1; transform: scale(1.1); }
 }
 
-/* Reveal animation */
-.reveal {
+/* Entrance animation — same feel as the Zanara landing page:
+   fade + rise + deblur, 0.6s, staggered per element via inline transition-delay. */
+.reveal-item {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(26px);
   filter: blur(8px);
-  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), filter 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.23, 1, 0.32, 1),
+    filter 0.6s ease;
+  will-change: opacity, transform, filter;
 }
 
-.reveal.in {
+/* The JS sets the inline transition-delay before flipping .is-visible. */
+.reveal-item.is-visible {
   opacity: 1;
   transform: translateY(0);
   filter: blur(0);
+}
+
+/* Reduced motion: keep the stagger logic but drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-item {
+    transform: none;
+    filter: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .reveal-item.is-visible {
+    transform: none;
+    filter: none;
+  }
 }
 
 /* Responsive */

@@ -2,47 +2,41 @@
 
 import { useState, useEffect } from 'react'
 
+// Entrance animation: fade + rise + deblur, staggered per element.
+// Mirrors the Zanara landing page (.reveal / .in) but starts immediately on
+// mount instead of waiting for an IntersectionObserver, so nothing can get
+// stuck invisible.
+const REVEAL_STAGGER_MS = 90
+
 export default function Home() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [recentDownloads, setRecentDownloads] = useState([])
+  const [revealed, setRevealed] = useState(false)
 
-  // Fetch recent downloads on mount
   useEffect(() => {
     fetchRecentDownloads()
   }, [])
 
+  // Kick off the staggered entrance on the next frame so the initial
+  // hidden state is painted first (otherwise there is nothing to transition from).
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setRevealed(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   const fetchRecentDownloads = async () => {
     try {
-      const res = await fetch('/api/recent')
+      const res = await fetch('/api/recent', { cache: 'no-store' })
       const data = await res.json()
       if (data.success) {
-        setRecentDownloads(data.downloads)
+        setRecentDownloads(Array.isArray(data.downloads) ? data.downloads : [])
       }
     } catch (err) {
       console.error('Failed to fetch recent downloads:', err)
     }
-  }
-
-  const detectPlatform = (url) => {
-    const platforms = {
-      facebook: ['facebook.com', 'fb.watch', 'fb.com'],
-      tiktok: ['tiktok.com', 'vm.tiktok.com'],
-      instagram: ['instagram.com', 'instagr.am'],
-      threads: ['threads.net'],
-      twitter: ['twitter.com', 'x.com', 't.co'],
-      pixiv: ['pixiv.net', 'pximg.net']
-    }
-
-    const urlLower = url.toLowerCase()
-    for (const [platform, domains] of Object.entries(platforms)) {
-      if (domains.some(domain => urlLower.includes(domain))) {
-        return platform
-      }
-    }
-    return 'unknown'
   }
 
   const handleSubmit = async (e) => {
@@ -55,9 +49,8 @@ export default function Home() {
       return
     }
 
-    const platform = detectPlatform(url)
-    if (platform === 'unknown') {
-      setError('Unsupported platform. Please use Facebook, TikTok, Instagram, Threads, X, or Pixiv links.')
+    if (!isTikTokUrl(url)) {
+      setError('Only TikTok links work right now. Other platforms are coming soon.')
       return
     }
 
@@ -67,7 +60,7 @@ export default function Home() {
       const res = await fetch('/api/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() })
+        body: JSON.stringify({ url: url.trim() }),
       })
 
       const data = await res.json()
@@ -77,7 +70,7 @@ export default function Home() {
       }
 
       setResult(data.data)
-      fetchRecentDownloads() // Refresh recent downloads
+      fetchRecentDownloads()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -105,45 +98,66 @@ export default function Home() {
     return date.toLocaleDateString()
   }
 
+  const formatDuration = (seconds) => {
+    if (!seconds || Number.isNaN(Number(seconds))) return null
+    const total = Math.floor(Number(seconds))
+    const m = Math.floor(total / 60)
+    const s = total % 60
+    return `${m}:${String(s).padStart(2, '0')}`
+  }
+
+  const formatCount = (n) => {
+    if (!n) return null
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}K`
+    return String(n)
+  }
+
+  // Stagger helper: returns the transition delay; the shared class is applied
+  // per element so the element's own className is never overwritten.
+  const reveal = (index) => ({
+    style: { transitionDelay: `${index * REVEAL_STAGGER_MS}ms` },
+  })
+  const revealClass = `reveal-item${revealed ? ' is-visible' : ''}`
+
   return (
     <main>
       {/* Hero Section */}
       <section className="hero">
-        <p className="eyebrow">Video Downloader</p>
-        <h1 className="title">
+        <p className={`eyebrow ${revealClass}`} {...reveal(0)}>
+          TikTok Downloader
+        </p>
+        <h1 className={`title ${revealClass}`} {...reveal(1)}>
           DOWNLOADIN YA<span className="caret">_</span>
         </h1>
-        <p className="subtitle">
-          Download videos from Facebook, TikTok, Instagram, Threads, X (Twitter), and Pixiv.
-          No login required, no cookies needed. Open source.
+        <p className={`subtitle ${revealClass}`} {...reveal(2)}>
+          Paste a TikTok link, get the video in HD without a watermark. No login, no cookies,
+          no API key. More platforms coming soon.
         </p>
 
         {/* Platform badges */}
-        <div className="platforms">
-          <span className="platform-badge">Facebook</span>
-          <span className="platform-badge">TikTok</span>
-          <span className="platform-badge">Instagram</span>
-          <span className="platform-badge">Threads</span>
-          <span className="platform-badge">X / Twitter</span>
-          <span className="platform-badge">Pixiv</span>
+        <div className={`platforms ${revealClass}`} {...reveal(3)}>
+          <span className="platform-badge platform-badge--active">TikTok</span>
+          <span className="platform-badge is-soon">Instagram</span>
+          <span className="platform-badge is-soon">Facebook</span>
+          <span className="platform-badge is-soon">Threads</span>
+          <span className="platform-badge is-soon">X / Twitter</span>
+          <span className="platform-badge is-soon">YouTube</span>
         </div>
 
         {/* Download form */}
-        <form className="download-form" onSubmit={handleSubmit}>
+        <form className={`download-form ${revealClass}`} {...reveal(4)} onSubmit={handleSubmit}>
           <div className="input-wrapper">
             <input
               type="url"
               className="url-input"
-              placeholder="Paste video URL here..."
+              placeholder="Paste a TikTok video URL here..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={loading}
+              spellCheck={false}
             />
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={loading || !url.trim()}
-            >
+            <button type="submit" className="submit-btn" disabled={loading || !url.trim()}>
               {loading ? '...' : 'DOWNLOAD'}
             </button>
           </div>
@@ -170,14 +184,36 @@ export default function Home() {
                   src={result.thumbnail}
                   alt="Video thumbnail"
                   className="video-thumb"
+                  loading="lazy"
                 />
               )}
               {result.title && (
-                <p className="video-meta"><strong>Title:</strong> {result.title}</p>
+                <p className="video-meta">
+                  <strong>Title:</strong> {result.title}
+                </p>
               )}
-              {result.duration && (
-                <p className="video-meta"><strong>Duration:</strong> {result.duration}</p>
-              )}
+              <div className="video-stats">
+                {result.author && (
+                  <span className="video-stat">
+                    <strong>Author:</strong> @{result.authorUsername || result.author}
+                  </span>
+                )}
+                {formatDuration(result.duration) && (
+                  <span className="video-stat">
+                    <strong>Duration:</strong> {formatDuration(result.duration)}
+                  </span>
+                )}
+                {formatCount(result.playCount) && (
+                  <span className="video-stat">
+                    <strong>Views:</strong> {formatCount(result.playCount)}
+                  </span>
+                )}
+                {formatCount(result.likeCount) && (
+                  <span className="video-stat">
+                    <strong>Likes:</strong> {formatCount(result.likeCount)}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="download-options">
               {result.downloads?.map((dl, i) => (
@@ -189,9 +225,21 @@ export default function Home() {
                   rel="noopener noreferrer"
                   download
                 >
-                  {dl.quality || 'Download'} {dl.format && `(${dl.format})`}
+                  {dl.quality || 'Download'}
+                  {dl.format ? ` (${dl.format})` : ''}
                 </a>
               ))}
+              {result.audio?.url && (
+                <a
+                  href={result.audio.url}
+                  className="download-btn download-btn--audio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                >
+                  Audio (mp3)
+                </a>
+              )}
             </div>
           </div>
         )}
@@ -199,21 +247,23 @@ export default function Home() {
 
       {/* Recent Downloads */}
       <section className="recent-section">
-        <header className="recent-header">
+        <header className={`recent-header ${revealClass}`} {...reveal(5)}>
           <p className="recent-eyebrow">activity log</p>
           <h2 className="recent-title">RECENT DOWNLOADS_</h2>
         </header>
 
         <div className="recent-grid">
           {recentDownloads.length === 0 ? (
-            <div className="recent-card">
-              <p style={{ color: 'var(--muted)', textAlign: 'center' }}>
-                No downloads yet. Be the first!
-              </p>
+            <div className={`recent-card ${revealClass}`} {...reveal(6)}>
+              <p className="recent-empty">No downloads yet. Be the first!</p>
             </div>
           ) : (
             recentDownloads.map((item, i) => (
-              <article key={item._id || i} className="recent-card reveal in">
+              <article
+                key={item._id || i}
+                className={`recent-card ${revealClass}`}
+                {...reveal(6 + i)}
+              >
                 <div className="recent-card-top">
                   <span className="recent-platform">{item.platform}</span>
                   <span className="recent-time">{formatTime(item.timestamp)}</span>
@@ -237,11 +287,21 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="footer">
-        <span>Downloadin Ya — Open Source Video Downloader</span>
+        <span>Downloadin Ya — TikTok Downloader</span>
         <a href="https://github.com/khezan10/downloadin-ya" target="_blank" rel="noopener noreferrer">
           GitHub
         </a>
       </footer>
     </main>
+  )
+}
+
+export function isTikTokUrl(url) {
+  const u = String(url).toLowerCase()
+  return (
+    u.includes('tiktok.com') ||
+    u.includes('vm.tiktok.com') ||
+    u.includes('vt.tiktok.com') ||
+    u.includes('m.tiktok.com')
   )
 }
