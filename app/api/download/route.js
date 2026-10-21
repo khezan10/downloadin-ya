@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { saveDownload } from '@/lib/db'
 
-// RapidAPI configuration - Social Download All In One
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || 'social-download-all-in-one.p.rapidapi.com'
-const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
+// OmegaTech API - FREE forever, no API key required
+// https://api.omegatech.app
+const OMEGATECH_HOST = 'api.omegatech.app'
 
 export async function POST(request) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request) {
     const platform = detectPlatform(url)
     if (platform === 'unknown') {
       return NextResponse.json(
-        { success: false, error: 'Unsupported platform' },
+        { success: false, error: 'Unsupported platform. Supported: Facebook, TikTok, Instagram, Threads, X/Twitter, Pinterest, YouTube' },
         { status: 400 }
       )
     }
@@ -31,8 +31,8 @@ export async function POST(request) {
                request.headers.get('x-real-ip') ||
                'unknown'
 
-    // Call RapidAPI based on platform
-    const downloadData = await fetchVideoFromRapidAPI(url, platform)
+    // Call OmegaTech API (FREE, no API key)
+    const downloadData = await fetchFromOmegaTech(url, platform)
 
     // Save to database (fire and forget)
     saveDownload({
@@ -64,7 +64,7 @@ function detectPlatform(url) {
   if (urlLower.includes('facebook.com') || urlLower.includes('fb.watch') || urlLower.includes('fb.com')) {
     return 'facebook'
   }
-  if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
+  if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com') || urlLower.includes('vt.tiktok.com')) {
     return 'tiktok'
   }
   if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
@@ -76,47 +76,59 @@ function detectPlatform(url) {
   if (urlLower.includes('twitter.com') || urlLower.includes('x.com') || urlLower.includes('t.co')) {
     return 'twitter'
   }
+  if (urlLower.includes('pinterest.com') || urlLower.includes('pin.it')) {
+    return 'pinterest'
+  }
   if (urlLower.includes('pixiv.net') || urlLower.includes('pximg.net')) {
     return 'pixiv'
+  }
+  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+    return 'youtube'
   }
   
   return 'unknown'
 }
 
-async function fetchVideoFromRapidAPI(url, platform) {
-  if (!RAPIDAPI_KEY || RAPIDAPI_KEY === 'needs-setup') {
-    throw new Error('RapidAPI key not configured. Please add RAPIDAPI_KEY to environment variables.')
+async function fetchFromOmegaTech(url, platform) {
+  let endpoint = ''
+  let params = new URLSearchParams()
+  
+  // Choose endpoint based on platform
+  if (platform === 'facebook') {
+    endpoint = '/api/download/Facebook'
+    params.append('action', 'resolve')
+    params.append('url', url)
+    params.append('quality', 'hd')
+  } else if (platform === 'pinterest') {
+    endpoint = '/api/download/Pinterest'
+    params.append('action', 'download')
+    params.append('url', url)
+  } else {
+    // All-in-one for TikTok, Instagram, Threads, Twitter, etc
+    endpoint = '/api/download/aio'
+    params.append('action', 'resolve')
+    params.append('url', url)
   }
 
-  // Social Download All In One API
-  const baseUrl = `https://${RAPIDAPI_HOST}`
+  const apiUrl = `https://${OMEGATECH_HOST}${endpoint}?${params.toString()}`
   
-  // This API uses GET with url parameter
-  const options = {
+  const response = await fetch(apiUrl, {
     method: 'GET',
     headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST
+      'Accept': 'application/json'
     }
-  }
+  })
 
-  // Encode URL for query parameter
-  const encodedUrl = encodeURIComponent(url)
-  const response = await fetch(`${baseUrl}/download?url=${encodedUrl}`, options)
   const data = await response.json()
 
-  if (!response.ok) {
-    throw new Error(data.message || data.error || 'API request failed')
+  if (!response.ok || data.error) {
+    throw new Error(data.error || data.message || 'Failed to fetch from API')
   }
 
-  // Normalize response format
   return normalizeResponse(data, platform)
 }
 
 function normalizeResponse(data, platform) {
-  // Social Download All In One API response format
-  // Normalize to: { title, thumbnail, duration, downloads: [{quality, format, url}] }
-
   const result = {
     title: data.title || data.filename || `Video from ${platform}`,
     thumbnail: null,
@@ -124,24 +136,23 @@ function normalizeResponse(data, platform) {
     downloads: []
   }
 
-  // Handle Social Download All In One response
-  // Common patterns: data.url, data.medias, data.downloads
-  if (data.url) {
+  // Direct URL format
+  if (data.url || data.downloadUrl || data.videoUrl) {
+    const videoUrl = data.url || data.downloadUrl || data.videoUrl
     result.downloads.push({
       quality: 'HD',
       format: 'mp4',
-      url: data.url
+      url: videoUrl
     })
     result.thumbnail = data.thumbnail || data.thumb || null
-    result.title = data.title || data.filename || result.title
   }
 
-  // Multiple media formats
+  // Medias array format
   if (data.medias && Array.isArray(data.medias)) {
     data.medias.forEach(media => {
       if (media.url) {
         result.downloads.push({
-          quality: media.quality || media.type || 'default',
+          quality: media.quality || media.type || 'HD',
           format: media.extension || 'mp4',
           url: media.url
         })
@@ -155,7 +166,7 @@ function normalizeResponse(data, platform) {
     data.downloads.forEach(dl => {
       if (dl.url) {
         result.downloads.push({
-          quality: dl.quality || dl.type || 'default',
+          quality: dl.quality || 'HD',
           format: dl.format || 'mp4',
           url: dl.url
         })
@@ -163,21 +174,30 @@ function normalizeResponse(data, platform) {
     })
   }
 
-  // Instagram/TikTok specific
-  if (data.video_url) {
+  // Quality variants (hd/sd)
+  if (data.hd || data.sd) {
+    if (data.hd) {
+      result.downloads.push({ quality: 'HD', format: 'mp4', url: data.hd })
+    }
+    if (data.sd) {
+      result.downloads.push({ quality: 'SD', format: 'mp4', url: data.sd })
+    }
+  }
+
+  // Audio only
+  if (data.audio || data.audioUrl) {
     result.downloads.push({
-      quality: 'HD',
-      format: 'mp4',
-      url: data.video_url
+      quality: 'Audio',
+      format: 'mp3',
+      url: data.audio || data.audioUrl
     })
   }
 
-  if (data.image_url || data.thumbnail) {
-    result.thumbnail = data.image_url || data.thumbnail
-  }
-
-  if (data.desc || data.description) {
-    result.title = data.desc || data.description
+  // Set title and thumbnail
+  if (data.title) result.title = data.title
+  if (data.desc || data.description) result.title = data.desc || data.description
+  if (data.thumbnail || data.thumb || data.cover) {
+    result.thumbnail = data.thumbnail || data.thumb || data.cover
   }
 
   // Ensure at least one download
