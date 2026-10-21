@@ -3,12 +3,14 @@ import './globals.css'
 export const metadata = {
   title: 'Downloadin Ya — Social Media Video Downloader',
   description:
-    'Download videos from TikTok, Instagram, X (Twitter) and Threads. No login, no cookies, no API key. YouTube, Facebook and Pinterest coming soon.',
+    'Download videos from TikTok, Instagram, YouTube, Facebook, X (Twitter) and Threads. No login, no cookies, no API key. Pinterest coming soon.',
   keywords: [
     'video downloader',
     'tiktok downloader',
     'instagram downloader',
     'instagram reels downloader',
+    'youtube downloader',
+    'facebook video downloader',
     'twitter downloader',
     'x downloader',
     'threads downloader',
@@ -17,7 +19,7 @@ export const metadata = {
   openGraph: {
     title: 'Downloadin Ya — Social Media Video Downloader',
     description:
-      'Download videos from TikTok, Instagram, X (Twitter) and Threads. No login, no cookies.',
+      'Download videos from TikTok, Instagram, YouTube, Facebook, X (Twitter) and Threads. No login, no cookies.',
     type: 'website',
   },
 }

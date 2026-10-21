@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server'
 import { saveDownload } from '@/lib/db'
+import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
 
-// Two free upstreams, both need no API key and no signup:
-//   1. TikWM — https://www.tikwm.com/api/ (TikTok, 1 req/sec per IP)
-//   2. socialdownloader.space — /api/download (IG, X, Threads, TikTok, YouTube)
+// Three free upstreams. None needs an API key, an account, or a credit card:
+//   1. SaveFrom's signed converter — multi-platform (TikTok, IG, X, Threads,
+//      YouTube, Facebook, Pinterest), no key, no signup. The request is signed
+//      with the routine from SaveFrom's own bundle; see lib/savefrom.js.
+//   2. TikWM — https://www.tikwm.com/api/ (TikTok, 1 req/sec per client IP)
+//   3. socialdownloader.space — a public instance of
+//      Vette1123/social-media-downloader (AGPL-3.0). It returns a relative
+//      proxy path, so we rewrite it to an absolute URL the browser can fetch.
 //
-// The second one is a public instance of Vette1123/social-media-downloader
-// (AGPL-3.0). It returns a relative proxy path, so we rewrite it to an
-// absolute URL the browser can fetch directly.
+// Order matters: SaveFrom resolves the most platforms and the most qualities,
+// so it goes first. The others are fallbacks for when its signature goes stale.
 
 const TIKWM_ENDPOINT = 'https://www.tikwm.com/api/'
 const SDD_BASE = 'https://www.socialdownloader.space'
@@ -32,7 +37,7 @@ export async function POST(request) {
         {
           success: false,
           error:
-            'Unsupported platform. Supported: TikTok, Instagram, X (Twitter), Threads.',
+            'Unsupported platform. Supported: TikTok, Instagram, YouTube, X (Twitter), Threads, Facebook, Pinterest.',
         },
         { status: 400 }
       )
@@ -67,8 +72,11 @@ export async function POST(request) {
 export const SUPPORTED_PLATFORMS = [
   'tiktok',
   'instagram',
+  'youtube',
   'twitter',
   'threads',
+  'facebook',
+  'pinterest',
 ]
 
 export function detectPlatform(url) {
@@ -90,6 +98,13 @@ export function detectPlatform(url) {
  */
 async function resolveMedia(url, platform) {
   const errors = []
+
+  // SaveFrom first — it covers the most platforms and returns quality labels.
+  try {
+    return normalizeSaveFrom(await resolveViaSaveFrom(url))
+  } catch (e) {
+    errors.push(e.message)
+  }
 
   if (platform === 'tiktok') {
     try {
@@ -123,7 +138,11 @@ async function resolveMedia(url, platform) {
     }
   }
 
-  throw new Error(errors[0] || 'Could not resolve this link.')
+  throw new Error(
+    errors.find((e) => !/signer|chunk|app\.js|HTTP 4\d\d/i.test(e)) ||
+      errors[0] ||
+      'Could not resolve this link.'
+  )
 }
 
 // --- Upstream 1: TikWM (TikTok) -------------------------------------------

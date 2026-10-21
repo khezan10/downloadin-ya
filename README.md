@@ -10,14 +10,16 @@ No login, no cookies, no API key.
 
 Live now:
 
-- **TikTok** — HD without watermark, plus a with-watermark fallback and MP3 audio
-- **Instagram** — reels, posts, carousels (video + MP3 audio)
-- **X (Twitter)** — video posts and image posts
-- **Threads** — video posts and MP3 audio
+| Platform | Formats |
+|----------|---------|
+| **TikTok** | up to 5 qualities, MP3 audio, HD without watermark |
+| **Instagram** | reels, posts, carousels — video + MP3 audio |
+| **YouTube** | up to 6 qualities (720p down) |
+| **Facebook** | reels and videos — HD + SD |
+| **X (Twitter)** | video posts and image posts |
+| **Threads** | video posts and MP3 audio |
 
-Coming soon:
-
-- YouTube, Facebook, Pinterest
+Coming soon: Pinterest, Pixiv
 
 ## Features
 
@@ -34,7 +36,11 @@ Coming soon:
 - **Frontend**: Next.js 16, React 19 (App Router)
 - **Database**: MongoDB Atlas (activity log only — downloads are never stored)
 - **Hosting**: Vercel
-- **Video APIs**: two free upstreams, neither needs an API key or an account
+- **Video APIs**: three free upstreams, none needs an API key or an account
+  - **SaveFrom's signed converter** — TikTok, Instagram, YouTube, Facebook, X,
+    Threads. The request is signed with the routine from SaveFrom's own web
+    bundle (`lib/savefrom.js`), so no key is needed. This is a client of a
+    public web API, not a documented one, so it can change without notice.
   - `TikWM` (`https://www.tikwm.com/api/`) — TikTok, ~1 request/second per client IP
   - `socialdownloader.space` — Instagram, X, Threads (public instance of
     [Vette1123/social-media-downloader](https://github.com/Vette1123/social-media-downloader), AGPL-3.0)
@@ -49,6 +55,11 @@ The multi-platform upstream sits behind Cloudflare, which serves a JavaScript
 challenge unless the request looks like a same-origin browser fetch. The route sends
 the full `Sec-Fetch-*` header trio plus `Accept-Language`, and retries once, which
 clears the challenge reliably.
+
+The SaveFrom signer is cached in module scope for 10 minutes. A cold start costs
+about 700 ms (fetch the chunk, evaluate it in a `node:vm` sandbox); a warm start
+costs about 5 ms to sign. The chunk id, its content hash, and the module id inside
+it are all discovered at runtime, so a SaveFrom redeploy does not break the site.
 
 Both upstreams only reach what a logged-out visitor can already see: public posts
 only, no private accounts, no paywalled content.

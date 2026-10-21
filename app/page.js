@@ -51,7 +51,7 @@ export default function Home() {
 
     if (!isSupportedUrl(url)) {
       setError(
-        'That link is not supported yet. Try TikTok, Instagram, X (Twitter) or Threads.'
+        'That link is not supported yet. Try TikTok, Instagram, YouTube, Facebook, X (Twitter) or Threads.'
       )
       return
     }
@@ -133,8 +133,8 @@ export default function Home() {
           DOWNLOADIN YA<span className="caret">_</span>
         </h1>
         <p className={`subtitle ${revealClass}`} {...reveal(2)}>
-          Paste a link from TikTok, Instagram, X (Twitter) or Threads and get the video
-          straight away. No login, no cookies, no API key. YouTube, Facebook and Pinterest
+          Paste a link from TikTok, Instagram, YouTube, Facebook, X (Twitter) or Threads
+          and get the video straight away. No login, no cookies, no API key. Pinterest
           coming soon.
         </p>
 
@@ -142,10 +142,10 @@ export default function Home() {
         <div className={`platforms ${revealClass}`} {...reveal(3)}>
           <span className="platform-badge platform-badge--active">TikTok</span>
           <span className="platform-badge platform-badge--active">Instagram</span>
+          <span className="platform-badge platform-badge--active">YouTube</span>
+          <span className="platform-badge platform-badge--active">Facebook</span>
           <span className="platform-badge platform-badge--active">X / Twitter</span>
           <span className="platform-badge platform-badge--active">Threads</span>
-          <span className="platform-badge is-soon">YouTube</span>
-          <span className="platform-badge is-soon">Facebook</span>
           <span className="platform-badge is-soon">Pinterest</span>
         </div>
 
@@ -155,7 +155,7 @@ export default function Home() {
             <input
               type="url"
               className="url-input"
-              placeholder="Paste a TikTok, Instagram, X or Threads URL..."
+              placeholder="Paste a TikTok, Instagram, YouTube, Facebook, X or Threads URL..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={loading}
@@ -306,6 +306,10 @@ export function isSupportedUrl(url) {
     u.includes('tiktok.com') ||
     u.includes('instagram.com') ||
     u.includes('instagr.am') ||
+    u.includes('youtube.com') ||
+    u.includes('youtu.be') ||
+    u.includes('facebook.com') ||
+    u.includes('fb.watch') ||
     u.includes('twitter.com') ||
     u.includes('x.com') ||
     u.includes('t.co') ||
