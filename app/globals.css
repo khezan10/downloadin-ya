@@ -411,6 +411,8 @@ body {
 }
 
 .recent-link {
+  /* WCAG 2.5.8 AA: 24px minimum target on pointer devices. */
+  min-height: 24px;
   font-size: 0.82rem;
   color: var(--lime);
   word-break: break-all;
