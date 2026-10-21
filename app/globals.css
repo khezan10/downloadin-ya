@@ -479,7 +479,7 @@ body {
   text-decoration: none;
   /* Comfortable tap target without changing the visual size. */
   display: inline-block;
-  padding: 10px 4px;
+  padding: 12px 6px;
 }
 
 /* Animations */
