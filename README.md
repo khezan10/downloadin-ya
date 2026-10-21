@@ -8,8 +8,16 @@ No login, no cookies, no API key.
 
 ## Supported Platforms
 
-- **TikTok** — live now
-- Instagram, Facebook, Threads, X (Twitter), YouTube — coming soon
+Live now:
+
+- **TikTok** — HD without watermark, plus a with-watermark fallback and MP3 audio
+- **Instagram** — reels, posts, carousels (video + MP3 audio)
+- **X (Twitter)** — video posts and image posts
+- **Threads** — video posts and MP3 audio
+
+Coming soon:
+
+- YouTube, Facebook, Pinterest
 
 ## Features
 
@@ -26,14 +34,24 @@ No login, no cookies, no API key.
 - **Frontend**: Next.js 16, React 19 (App Router)
 - **Database**: MongoDB Atlas (activity log only — downloads are never stored)
 - **Hosting**: Vercel
-- **Video API**: TikWM (`https://www.tikwm.com/api/`) — free, no API key, no signup
+- **Video APIs**: two free upstreams, neither needs an API key or an account
+  - `TikWM` (`https://www.tikwm.com/api/`) — TikTok, ~1 request/second per client IP
+  - `socialdownloader.space` — Instagram, X, Threads (public instance of
+    [Vette1123/social-media-downloader](https://github.com/Vette1123/social-media-downloader), AGPL-3.0)
 
-## About the TikWM API
+## About the free upstreams
 
-The upstream is a public endpoint that needs no key and no account. Its free tier
-allows roughly **1 request per second**, and that limit is applied per client IP —
-so a shared server can serve many users at once. It only resolves TikTok links;
-other platforms are handled by whatever API is wired in next.
+Neither upstream needs a key, a signup, or a credit card, and neither charges per
+request. TikWM's free tier allows roughly **1 request per second**, applied per
+client IP — so one Vercel function can serve many users at once.
+
+The multi-platform upstream sits behind Cloudflare, which serves a JavaScript
+challenge unless the request looks like a same-origin browser fetch. The route sends
+the full `Sec-Fetch-*` header trio plus `Accept-Language`, and retries once, which
+clears the challenge reliably.
+
+Both upstreams only reach what a logged-out visitor can already see: public posts
+only, no private accounts, no paywalled content.
 
 ## Setup
 
