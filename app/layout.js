@@ -1,14 +1,23 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Downloadin Ya — TikTok Video Downloader',
+  title: 'Downloadin Ya — Social Media Video Downloader',
   description:
-    'Download TikTok videos in HD without a watermark. No login, no cookies, no API key. Instagram, Facebook and more coming soon.',
-  keywords: ['tiktok downloader', 'tiktok download', 'tiktok video', 'download tiktok without watermark', 'save tiktok'],
+    'Download videos from TikTok, Instagram, X (Twitter) and Threads. No login, no cookies, no API key. YouTube, Facebook and Pinterest coming soon.',
+  keywords: [
+    'video downloader',
+    'tiktok downloader',
+    'instagram downloader',
+    'instagram reels downloader',
+    'twitter downloader',
+    'x downloader',
+    'threads downloader',
+  ],
   authors: [{ name: 'Khezan Amartya' }],
   openGraph: {
-    title: 'Downloadin Ya — TikTok Video Downloader',
-    description: 'Download TikTok videos in HD without a watermark. No login, no cookies.',
+    title: 'Downloadin Ya — Social Media Video Downloader',
+    description:
+      'Download videos from TikTok, Instagram, X (Twitter) and Threads. No login, no cookies.',
     type: 'website',
   },
 }

@@ -49,8 +49,10 @@ export default function Home() {
       return
     }
 
-    if (!isTikTokUrl(url)) {
-      setError('Only TikTok links work right now. Other platforms are coming soon.')
+    if (!isSupportedUrl(url)) {
+      setError(
+        'That link is not supported yet. Try TikTok, Instagram, X (Twitter) or Threads.'
+      )
       return
     }
 
@@ -131,18 +133,20 @@ export default function Home() {
           DOWNLOADIN YA<span className="caret">_</span>
         </h1>
         <p className={`subtitle ${revealClass}`} {...reveal(2)}>
-          Paste a TikTok link, get the video in HD without a watermark. No login, no cookies,
-          no API key. More platforms coming soon.
+          Paste a link from TikTok, Instagram, X (Twitter) or Threads and get the video
+          straight away. No login, no cookies, no API key. YouTube, Facebook and Pinterest
+          coming soon.
         </p>
 
         {/* Platform badges */}
         <div className={`platforms ${revealClass}`} {...reveal(3)}>
           <span className="platform-badge platform-badge--active">TikTok</span>
-          <span className="platform-badge is-soon">Instagram</span>
-          <span className="platform-badge is-soon">Facebook</span>
-          <span className="platform-badge is-soon">Threads</span>
-          <span className="platform-badge is-soon">X / Twitter</span>
+          <span className="platform-badge platform-badge--active">Instagram</span>
+          <span className="platform-badge platform-badge--active">X / Twitter</span>
+          <span className="platform-badge platform-badge--active">Threads</span>
           <span className="platform-badge is-soon">YouTube</span>
+          <span className="platform-badge is-soon">Facebook</span>
+          <span className="platform-badge is-soon">Pinterest</span>
         </div>
 
         {/* Download form */}
@@ -151,7 +155,7 @@ export default function Home() {
             <input
               type="url"
               className="url-input"
-              placeholder="Paste a TikTok video URL here..."
+              placeholder="Paste a TikTok, Instagram, X or Threads URL..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={loading}
@@ -296,12 +300,16 @@ export default function Home() {
   )
 }
 
-export function isTikTokUrl(url) {
+export function isSupportedUrl(url) {
   const u = String(url).toLowerCase()
   return (
     u.includes('tiktok.com') ||
-    u.includes('vm.tiktok.com') ||
-    u.includes('vt.tiktok.com') ||
-    u.includes('m.tiktok.com')
+    u.includes('instagram.com') ||
+    u.includes('instagr.am') ||
+    u.includes('twitter.com') ||
+    u.includes('x.com') ||
+    u.includes('t.co') ||
+    u.includes('threads.net') ||
+    u.includes('threads.com')
   )
 }
