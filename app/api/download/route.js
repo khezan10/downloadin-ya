@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { saveDownload } from '@/lib/db'
 
-// RapidAPI configuration
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || 'social-media-video-downloader.p.rapidapi.com'
+// RapidAPI configuration - Social Download All In One
+const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || 'social-download-all-in-one.p.rapidapi.com'
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY
 
 export async function POST(request) {
@@ -84,29 +84,25 @@ function detectPlatform(url) {
 }
 
 async function fetchVideoFromRapidAPI(url, platform) {
-  if (!RAPIDAPI_KEY) {
+  if (!RAPIDAPI_KEY || RAPIDAPI_KEY === 'needs-setup') {
     throw new Error('RapidAPI key not configured. Please add RAPIDAPI_KEY to environment variables.')
   }
 
-  // Different API endpoints for different platforms
-  let endpoint, headers, body
-
-  // Generic social media downloader API
+  // Social Download All In One API
   const baseUrl = `https://${RAPIDAPI_HOST}`
   
-  // Most RapidAPI video downloaders use similar pattern
-  // Adjust based on your chosen API
+  // This API uses GET with url parameter
   const options = {
-    method: 'POST',
+    method: 'GET',
     headers: {
-      'content-type': 'application/json',
       'X-RapidAPI-Key': RAPIDAPI_KEY,
       'X-RapidAPI-Host': RAPIDAPI_HOST
-    },
-    body: JSON.stringify({ url })
+    }
   }
 
-  const response = await fetch(`${baseUrl}/download`, options)
+  // Encode URL for query parameter
+  const encodedUrl = encodeURIComponent(url)
+  const response = await fetch(`${baseUrl}/download?url=${encodedUrl}`, options)
   const data = await response.json()
 
   if (!response.ok) {
@@ -118,57 +114,75 @@ async function fetchVideoFromRapidAPI(url, platform) {
 }
 
 function normalizeResponse(data, platform) {
-  // Different APIs return different structures
+  // Social Download All In One API response format
   // Normalize to: { title, thumbnail, duration, downloads: [{quality, format, url}] }
 
-  // Common response patterns
   const result = {
     title: data.title || data.filename || `Video from ${platform}`,
-    thumbnail: data.thumbnail || data.thumb || data.image || null,
+    thumbnail: null,
     duration: data.duration || null,
     downloads: []
   }
 
-  // Handle various response formats
+  // Handle Social Download All In One response
+  // Common patterns: data.url, data.medias, data.downloads
   if (data.url) {
-    // Single URL format
     result.downloads.push({
-      quality: 'default',
+      quality: 'HD',
       format: 'mp4',
       url: data.url
     })
-  } else if (data.downloads || data.formats || data.links) {
-    // Multiple formats
-    const formats = data.downloads || data.formats || data.links || []
-    formats.forEach(fmt => {
-      if (fmt.url) {
+    result.thumbnail = data.thumbnail || data.thumb || null
+    result.title = data.title || data.filename || result.title
+  }
+
+  // Multiple media formats
+  if (data.medias && Array.isArray(data.medias)) {
+    data.medias.forEach(media => {
+      if (media.url) {
         result.downloads.push({
-          quality: fmt.quality || fmt.qualityLabel || 'default',
-          format: fmt.format || fmt.ext || 'mp4',
-          url: fmt.url
+          quality: media.quality || media.type || 'default',
+          format: media.extension || 'mp4',
+          url: media.url
         })
       }
     })
-  } else if (data.medias && Array.isArray(data.medias)) {
-    // TikWM/TikTok style response
-    data.medias.forEach(media => {
-      result.downloads.push({
-        quality: media.quality || 'default',
-        format: media.extension || 'mp4',
-        url: media.url
-      })
-    })
-    result.title = data.title || data.desc || result.title
-    result.thumbnail = data.cover || data.thumbnail || result.thumbnail
+    result.thumbnail = data.thumbnail || data.cover || null
   }
 
-  // Ensure at least one download option
-  if (result.downloads.length === 0 && data.video_url) {
+  // Downloads array format
+  if (data.downloads && Array.isArray(data.downloads)) {
+    data.downloads.forEach(dl => {
+      if (dl.url) {
+        result.downloads.push({
+          quality: dl.quality || dl.type || 'default',
+          format: dl.format || 'mp4',
+          url: dl.url
+        })
+      }
+    })
+  }
+
+  // Instagram/TikTok specific
+  if (data.video_url) {
     result.downloads.push({
-      quality: 'default',
+      quality: 'HD',
       format: 'mp4',
       url: data.video_url
     })
+  }
+
+  if (data.image_url || data.thumbnail) {
+    result.thumbnail = data.image_url || data.thumbnail
+  }
+
+  if (data.desc || data.description) {
+    result.title = data.desc || data.description
+  }
+
+  // Ensure at least one download
+  if (result.downloads.length === 0) {
+    throw new Error('No downloadable media found')
   }
 
   return result
