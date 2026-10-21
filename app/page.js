@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import IdleAnimations from '@/components/IdleAnimations'
 import Typewriter from '@/components/Typewriter'
-import Logo from '@/components/Logo'
 
 // Entrance animation: fade + rise + deblur, staggered per element.
 // Mirrors the Zanara landing page (.reveal / .in) but starts immediately on
@@ -141,25 +140,13 @@ export default function Home() {
 
   return (
     <main>
-      {/* Header */}
-      <header className={`site-header ${revealClass}`} {...reveal(0)}>
-        <a href="/" className="site-header-logo" aria-label="Downloadin Ya home">
-          <Logo size={40} />
-        </a>
-        <nav className="site-header-nav">
-          <a href="https://github.com/khezan10/downloadin-ya" target="_blank" rel="noopener noreferrer">
-            GitHub
-          </a>
-        </nav>
-      </header>
-
       {/* Hero Section */}
       <section className="hero">
-        <p className={`eyebrow ${revealClass}`} {...reveal(1)} ref={eyebrowRef}>
+        <p className={`eyebrow ${revealClass}`} {...reveal(0)} ref={eyebrowRef}>
           Social Video Downloader
         </p>
 
-        <h1 className={`title ${revealClass}`} {...reveal(2)} ref={titleRef}>
+        <h1 className={`title ${revealClass}`} {...reveal(1)} ref={titleRef}>
           <span className="title-text" aria-label={TITLE_TEXT}>
             {TITLE_TEXT.split('').map((ch, i) => (
               <span className="ch" key={i} aria-hidden="true">
@@ -172,12 +159,12 @@ export default function Home() {
           </span>
         </h1>
 
-        <p className={`subtitle ${revealClass}`} {...reveal(3)}>
+        <p className={`subtitle ${revealClass}`} {...reveal(2)}>
           <Typewriter lines={TAGLINES} />
         </p>
 
         {/* Platform badges */}
-        <div className={`platforms ${revealClass}`} {...reveal(4)}>
+        <div className={`platforms ${revealClass}`} {...reveal(3)}>
           <span className="platform-badge platform-badge--active">TikTok</span>
           <span className="platform-badge platform-badge--active">Instagram</span>
           <span className="platform-badge platform-badge--active">YouTube</span>
@@ -190,7 +177,7 @@ export default function Home() {
         {/* Download form */}
         <div
           className={`download-card ${revealClass}`}
-          {...reveal(5)}
+          {...reveal(4)}
           ref={cardRef}
         >
           <form className="download-form" onSubmit={handleSubmit}>
@@ -295,14 +282,14 @@ export default function Home() {
 
       {/* Recent Downloads */}
       <section className="recent-section">
-        <header className={`recent-header ${revealClass}`} {...reveal(7)}>
+        <header className={`recent-header ${revealClass}`} {...reveal(6)}>
           <p className="recent-eyebrow">activity log</p>
           <h2 className="recent-title">RECENT DOWNLOADS_</h2>
         </header>
 
         <div className="recent-grid">
           {recentDownloads.length === 0 ? (
-            <div className={`recent-card ${revealClass}`} {...reveal(7)}>
+            <div className={`recent-card ${revealClass}`} {...reveal(6)}>
               <p className="recent-empty">No downloads yet. Be the first!</p>
             </div>
           ) : (
@@ -310,7 +297,7 @@ export default function Home() {
               <article
                 key={item._id || i}
                 className={`recent-card ${revealClass}`}
-                {...reveal(7 + i)}
+                {...reveal(6 + i)}
               >
                 <div className="recent-card-top">
                   <span className="recent-platform">{item.platform}</span>

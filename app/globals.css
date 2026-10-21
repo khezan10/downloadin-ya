@@ -42,66 +42,6 @@ body {
   pointer-events: none;
 }
 
-/* Header with the logo */
-.site-header {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 24px;
-  max-width: 1180px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.site-header-logo {
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-  transition: opacity 0.25s ease;
-}
-
-.site-header-logo:hover {
-  opacity: 0.8;
-}
-
-.logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.logo-mark {
-  display: block;
-  image-rendering: pixelated;
-}
-
-.logo-wordmark {
-  display: block;
-  image-rendering: pixelated;
-}
-
-.site-header-nav {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.site-header-nav a {
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.25s ease;
-}
-
-.site-header-nav a:hover {
-  color: var(--lime);
-}
-
 /* Hero section */
 .hero {
   min-height: 70vh;
@@ -116,7 +56,7 @@ body {
 
 .eyebrow {
   margin-bottom: 16px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.32em;
   color: var(--lime);
   text-transform: uppercase;
@@ -413,7 +353,7 @@ body {
 }
 
 .recent-eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   letter-spacing: 0.32em;
   color: var(--lime);
   text-transform: uppercase;
@@ -459,14 +399,14 @@ body {
 }
 
 .recent-platform {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   letter-spacing: 0.2em;
   color: var(--muted);
   text-transform: uppercase;
 }
 
 .recent-time {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 
@@ -477,7 +417,7 @@ body {
 }
 
 .recent-ip {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
@@ -527,7 +467,7 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 16px;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--muted);
   text-align: center;
 }
@@ -535,6 +475,9 @@ body {
 .footer a {
   color: var(--lime);
   text-decoration: none;
+  /* Comfortable tap target without changing the visual size. */
+  display: inline-block;
+  padding: 10px 4px;
 }
 
 /* Animations */
@@ -583,9 +526,33 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 767px) {
-  .site-header {
-    padding: 14px 20px;
+/* ── Unified responsive system ──────────────────────────────────────
+   mobile  <= 640px   |   tablet 641..1024px   |   desktop > 1024px
+   Shared with shortlink-website and tmail-zanara so all three break
+   at the same widths and keep the same touch-target floor. */
+
+/* Mobile */
+@media (max-width: 640px) {
+  .input-wrapper {
+    flex-direction: column;
+  }
+
+  .submit-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .url-input {
+    min-height: 48px;
+  }
+
+  .hero {
+    min-height: 60vh;
+    padding: 32px 20px;
+  }
+
+  .recent-section {
+    padding: 40px 20px 140px;
   }
 
   .footer {
@@ -599,24 +566,38 @@ body {
     padding-bottom: 88px;
   }
 
-  .logo {
-    gap: 9px;
+  /* Touch targets: 44px floor for anything a finger has to hit. */
+  .recent-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
   }
 
-  .input-wrapper {
-    flex-direction: column;
+  .download-btn {
+    min-height: 44px;
   }
 
-  .submit-btn {
-    width: 100%;
+  .platform-badge {
+    padding: 9px 14px;
   }
+}
 
+/* Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
   .hero {
-    min-height: 60vh;
-    padding: 32px 20px;
+    min-height: 64vh;
+    padding: 48px 32px;
   }
 
   .recent-section {
-    padding: 40px 20px 140px;
+    padding: 72px 32px 160px;
+  }
+
+  .title {
+    font-size: clamp(2.4rem, 7vw, 3.4rem);
+  }
+
+  .subtitle {
+    max-width: 58ch;
   }
 }
