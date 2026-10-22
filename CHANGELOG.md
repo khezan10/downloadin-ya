@@ -16,6 +16,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   and `Signed-off-by:` trailers that put bots into the contributor list were
   dropped, and the original commit dates were kept, so the history still reads
   as a timeline rather than a single burst.
+- **The checks can be started by hand.** `CI` and `Secret scan` now also react
+  to `workflow_dispatch`, so a run can be triggered from the Actions tab
+  without pushing a commit.
 
 ## [1.0.0] — 2026-10-22
 
