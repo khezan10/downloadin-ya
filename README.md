@@ -1,8 +1,8 @@
 # Downloadin Ya
 
 A social media video downloader. Paste a link from TikTok, Instagram, YouTube,
-Facebook, X (Twitter) or Threads and get the video — up to six quality options,
-plus MP3 audio. No login, no cookies, no API key.
+Facebook, X (Twitter), Threads or Pinterest and get the media — up to six
+quality options, plus MP3 audio. No login, no cookies, no API key.
 
 **Live:** https://downloadin-ya.vercel.app
 **Custom domain:** https://downloadin.mzg.my.id
@@ -19,8 +19,14 @@ Live now:
 | **Facebook** | reels and videos — HD + SD |
 | **X (Twitter)** | video posts and image posts |
 | **Threads** | video posts and MP3 audio |
+| **Pinterest** | video pins (MP4) and image pins (full-resolution JPEG) |
 
-Coming soon: Pinterest, Pixiv
+Coming soon: Pixiv
+
+Pinterest accepts `pinterest.com/pin/…` in every shape it is published in —
+the numeric id, the `slug--id` form, the country domains (`pinterest.co.uk`,
+`pinterest.de`, …) and `pin.it` short links. All of them are rewritten to the
+canonical numeric form before the request goes out.
 
 ## API
 

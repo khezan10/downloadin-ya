@@ -3,6 +3,9 @@ import { saveDownload } from '@/lib/db'
 import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
 import { recordUse } from '@/lib/upstreams'
 import { fetchTikwm } from '@/lib/tikwm'
+import { SDD_BASE, unwrapSddProxy, toPinterestOriginal } from '@/lib/sdd'
+import { normalizePinterestUrl, isPinterestUrl } from '@/lib/pinterest'
+import { detectPlatform, SUPPORTED_PLATFORMS } from '@/lib/platform'
 
 // Three free upstreams. None needs an API key, an account, or a credit card:
 //   1. SaveFrom's signed converter — multi-platform (TikTok, IG, X, Threads,
@@ -17,7 +20,6 @@ import { fetchTikwm } from '@/lib/tikwm'
 // so it goes first. The others are fallbacks for when its signature goes stale.
 
 const TIKWM_ENDPOINT = 'https://www.tikwm.com/api/'
-const SDD_BASE = 'https://www.socialdownloader.space'
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -56,9 +58,13 @@ export async function POST(request) {
       request.headers.get('x-real-ip') ||
       'unknown'
 
+    // Pinterest pins arrive in several shapes; rewrite them to the canonical
+    // numeric form the upstream recognises before asking it to resolve them.
+    const target = platform === 'pinterest' ? normalizePinterestUrl(url) : url
+
     const { upstream, data: downloadData } = forced
-      ? await resolveWith(url, platform, forced)
-      : await resolveMedia(url, platform)
+      ? await resolveWith(target, platform, forced)
+      : await resolveMedia(target, platform)
 
     // A forced upstream is a diagnostic request, not real traffic. Keep it
     // out of the public activity log and out of the serving-share numbers, so
@@ -87,28 +93,6 @@ export async function POST(request) {
   }
 }
 
-export const SUPPORTED_PLATFORMS = [
-  'tiktok',
-  'instagram',
-  'youtube',
-  'twitter',
-  'threads',
-  'facebook',
-  'pinterest',
-]
-
-export function detectPlatform(url) {
-  const u = String(url).toLowerCase()
-  if (u.includes('tiktok.com')) return 'tiktok'
-  if (u.includes('instagram.com') || u.includes('instagr.am')) return 'instagram'
-  if (u.includes('youtube.com') || u.includes('youtu.be')) return 'youtube'
-  if (u.includes('threads.net') || u.includes('threads.com')) return 'threads'
-  if (u.includes('twitter.com') || u.includes('x.com') || u.includes('t.co')) return 'twitter'
-  if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook'
-  if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest'
-  return 'unknown'
-}
-
 /**
  * Resolve using exactly one named upstream. Throws if it is not a known one.
  */
@@ -126,57 +110,116 @@ async function resolveWith(url, platform, upstreamId) {
 }
 
 /**
+ * Check that a resolved media URL is worth handing to a visitor.
+ *
+ * The check is deliberately lenient. The upstream CDNs rate-limit by IP, and
+ * a 403 seen from the server says far more about *our* address than about the
+ * link: the same URL loads fine in a browser. So only a status that means
+ * "this is gone" (404, 410, 451) is treated as a failure — a 403 or a 429 is
+ * inconclusive and the link is passed through.
+ *
+ * Returns 'ok', 'dead' or 'unknown'.
+ */
+async function verifyMediaUrl(url) {
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Range: 'bytes=0-1023', 'User-Agent': UA },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000),
+    })
+    await res.arrayBuffer().catch(() => {})
+
+    if (res.status < 400) return 'ok'
+    if (res.status === 404 || res.status === 410 || res.status === 451) return 'dead'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
  * Try each upstream in order until one resolves the URL.
  * TikWM goes first for TikTok because it returns direct CDN links with known
  * quality labels; the socialdownloader instance covers everything else.
  */
 async function resolveMedia(url, platform) {
+  // Each entry is "upstream: reason" so a failure says which backend tried and
+  // why, instead of a bare sentence.
   const errors = []
+  const fail = (upstream, e) => errors.push(`${upstream}: ${e.message}`)
 
-  // SaveFrom first — it covers the most platforms and returns quality labels.
+  // Resolve with an upstream, then confirm the link it produced is usable.
+  // If the link is dead the upstream is treated as failed and the chain moves
+  // on to the next one.
+  const attempt = async (upstream, data) => {
+    const probe = data?.downloads?.[0]?.url
+    if (probe) {
+      const verdict = await verifyMediaUrl(probe)
+      if (verdict === 'dead') {
+        throw new Error('the media link it returned is no longer available')
+      }
+    }
+    return { upstream, data }
+  }
+
+  // Pinterest first goes through socialdownloader: it distinguishes an image
+  // pin from a video pin and returns the full-resolution image, where
+  // SaveFrom hands back a single generic MP4 for either.
+  if (platform === 'pinterest') {
+    try {
+      return await attempt('socialdownloader', await viaSocialDownloader(url))
+    } catch (e) {
+      fail('socialdownloader', e)
+    }
+  }
+
+  // SaveFrom first for the rest — it covers the most platforms and returns
+  // quality labels.
   try {
-    return { upstream: 'savefrom', data: normalizeSaveFrom(await resolveViaSaveFrom(url)) }
+    return await attempt('savefrom', normalizeSaveFrom(await resolveViaSaveFrom(url)))
   } catch (e) {
-    errors.push(e.message)
+    fail('savefrom', e)
   }
 
   if (platform === 'tiktok') {
     try {
-      return { upstream: 'tikwm', data: await viaTikwm(url) }
+      return await attempt('tikwm', await viaTikwm(url))
     } catch (e) {
-      errors.push(e.message)
+      fail('tikwm', e)
     }
   }
 
   try {
-    return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
+    return await attempt('socialdownloader', await viaSocialDownloader(url))
   } catch (e) {
-    errors.push(e.message)
+    fail('socialdownloader', e)
   }
 
   // The upstream occasionally answers with a Cloudflare challenge page instead
   // of JSON. One retry with the same headers clears it.
   try {
     await sleep(1200)
-    return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
+    return await attempt('socialdownloader', await viaSocialDownloader(url))
   } catch (e) {
-    errors.push(e.message)
+    fail('socialdownloader (retry)', e)
   }
 
   // TikTok can still fall back to the other upstream.
   if (platform === 'tiktok') {
     try {
-      return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
+      return await attempt('socialdownloader', await viaSocialDownloader(url))
     } catch (e) {
-      errors.push(e.message)
+      fail('socialdownloader', e)
     }
   }
 
-  throw new Error(
-    errors.find((e) => !/signer|chunk|app\.js|HTTP 4\d\d/i.test(e)) ||
-      errors[0] ||
-      'Could not resolve this link.'
+  const meaningful = errors.find(
+    (e) => !/signer|chunk|app\.js|HTTP 4\d\d|rate/i.test(e)
   )
+  const detail = meaningful || errors[0] || 'Could not resolve this link.'
+  console.error('resolveMedia failed:', errors)
+  throw new Error(detail)
 }
 
 // --- Upstream 1: TikWM (TikTok) -------------------------------------------
@@ -275,23 +318,28 @@ async function viaSocialDownloader(url) {
   const meta = data.metadata || {}
   const downloads = []
 
+  // The upstream returns its own proxy path for videos. That route answers
+  // HTTP 403 to a plain browser request, so hand over the direct CDN URL it
+  // wraps instead — otherwise the download button does nothing.
   if (data.downloadUrl) {
     downloads.push({
       quality: 'Video',
       format: 'mp4',
-      url: absolute(data.downloadUrl),
+      url: absolute(unwrapSddProxy(data.downloadUrl)),
       size: meta.sizeBytes || null,
     })
   }
 
   // Image posts (X carousels, IG photo posts) come back as `images[]`.
   const images = Array.isArray(meta.images) ? meta.images : []
+  const isPinterest = meta.platform === 'pinterest' || isPinterestUrl(url)
   images.forEach((img, i) => {
     if (!img || !img.url) return
     downloads.push({
       quality: images.length > 1 ? `Image ${i + 1}/${images.length}` : 'Image',
       format: 'jpg',
-      url: img.url,
+      // Pinterest hands over a /564x/ preview; /originals/ is the full file.
+      url: isPinterest ? toPinterestOriginal(img.url) : img.url,
       size: null,
     })
   })
@@ -299,7 +347,14 @@ async function viaSocialDownloader(url) {
   // YouTube can resolve audio only (no video stream) — surface it.
   let audio = null
   if (data.audioUrl) {
-    audio = { title: 'Audio', url: absolute(data.audioUrl), format: 'mp3' }
+    const audioUrl = absolute(unwrapSddProxy(data.audioUrl))
+    // For a Pinterest video pin the "audio" endpoint wraps the very same MP4
+    // as the video one. Offering it again would be a second button for the
+    // same file, so leave it out.
+    const isDuplicate = downloads.some((d) => d.url === audioUrl)
+    if (!isDuplicate) {
+      audio = { title: 'Audio', url: audioUrl, format: 'mp3' }
+    }
   } else if (meta.rawMusicUrl) {
     audio = { title: 'Audio', url: meta.rawMusicUrl, format: 'mp4' }
   }

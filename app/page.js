@@ -15,7 +15,7 @@ const TAGLINES = [
   'Paste a link from TikTok, Instagram, YouTube, Facebook, X or Threads and get the video straight away.',
   'No login, no cookies, no API key — just paste the URL and press download.',
   'HD, SD, MP3 — pick the quality that fits, up to six options per video.',
-  'Public posts only. Pinterest is on the way.',
+  'Public posts only.',
 ]
 
 const TITLE_TEXT = 'DOWNLOADIN YA'
@@ -190,7 +190,7 @@ export default function Home() {
           <span className="platform-badge platform-badge--active">Facebook</span>
           <span className="platform-badge platform-badge--active">X / Twitter</span>
           <span className="platform-badge platform-badge--active">Threads</span>
-          <span className="platform-badge is-soon">Pinterest</span>
+          <span className="platform-badge platform-badge--active">Pinterest</span>
         </div>
 
         {/* Download form */}
