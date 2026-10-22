@@ -33,6 +33,12 @@ export async function POST(request) {
       )
     }
 
+    // Optional override: force a specific upstream. Used to verify that a
+    // fallback still works when the primary is healthy and never gets used.
+    const forced = String(body?.upstream || request.nextUrl?.searchParams?.get('upstream') || '')
+      .trim()
+      .toLowerCase()
+
     const platform = detectPlatform(url)
     if (!SUPPORTED_PLATFORMS.includes(platform)) {
       return NextResponse.json(
@@ -50,7 +56,9 @@ export async function POST(request) {
       request.headers.get('x-real-ip') ||
       'unknown'
 
-    const { upstream, data: downloadData } = await resolveMedia(url, platform)
+    const { upstream, data: downloadData } = forced
+      ? await resolveWith(url, platform, forced)
+      : await resolveMedia(url, platform)
     recordUse(upstream)
 
     saveDownload({
@@ -93,6 +101,22 @@ export function detectPlatform(url) {
   if (u.includes('facebook.com') || u.includes('fb.watch') || u.includes('fb.com')) return 'facebook'
   if (u.includes('pinterest.com') || u.includes('pin.it')) return 'pinterest'
   return 'unknown'
+}
+
+/**
+ * Resolve using exactly one named upstream. Throws if it is not a known one.
+ */
+async function resolveWith(url, platform, upstreamId) {
+  if (upstreamId === 'savefrom') {
+    return { upstream: 'savefrom', data: normalizeSaveFrom(await resolveViaSaveFrom(url)) }
+  }
+  if (upstreamId === 'tikwm') {
+    return { upstream: 'tikwm', data: await viaTikwm(url) }
+  }
+  if (upstreamId === 'socialdownloader') {
+    return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
+  }
+  throw new Error(`Unknown upstream "${upstreamId}".`)
 }
 
 /**
