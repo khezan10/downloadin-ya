@@ -19,6 +19,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - **The checks can be started by hand.** `CI` and `Secret scan` now also react
   to `workflow_dispatch`, so a run can be triggered from the Actions tab
   without pushing a commit.
+- **The upstreams are watched.** A new scheduled workflow probes the deployed
+  site and its three resolvers every six hours. When one of them stops
+  answering it opens a single tracking issue, updates that issue on every
+  later failure, and closes it once everything answers again.
 
 ## [1.0.0] — 2026-10-22
 
