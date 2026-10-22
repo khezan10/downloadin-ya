@@ -112,13 +112,13 @@ async function resolveWith(url, platform, upstreamId) {
 /**
  * Check that a resolved media URL is worth handing to a visitor.
  *
- * The check is deliberately lenient. The upstream CDNs rate-limit by IP, and
- * a 403 seen from the server says far more about *our* address than about the
- * link: the same URL loads fine in a browser. So only a status that means
- * "this is gone" (404, 410, 451) is treated as a failure — a 403 or a 429 is
- * inconclusive and the link is passed through.
+ * Returns 'ok', 'dead' (the file is gone), 'blocked' (the CDN refuses to
+ * serve it) or 'unknown' (rate limited, temporary error).
  *
- * Returns 'ok', 'dead' or 'unknown'.
+ * A blocked verdict is trusted because it was confirmed from three
+ * unrelated addresses — the server, a laptop and a third-party proxy all
+ * got the same 403 for the same link, so it is the upstream refusing
+ * everyone rather than our own address being throttled.
  */
 async function verifyMediaUrl(url) {
   try {
@@ -132,6 +132,7 @@ async function verifyMediaUrl(url) {
 
     if (res.status < 400) return 'ok'
     if (res.status === 404 || res.status === 410 || res.status === 451) return 'dead'
+    if (res.status === 401 || res.status === 403) return 'blocked'
     return 'unknown'
   } catch {
     return 'unknown'
@@ -148,16 +149,27 @@ async function resolveMedia(url, platform) {
   // why, instead of a bare sentence.
   const errors = []
   const fail = (upstream, e) => errors.push(`${upstream}: ${e.message}`)
+  let lastResult = null
 
   // Resolve with an upstream, then confirm the link it produced is usable.
   // If the link is dead the upstream is treated as failed and the chain moves
   // on to the next one.
   const attempt = async (upstream, data) => {
+    lastResult = { upstream, data }
     const probe = data?.downloads?.[0]?.url
     if (probe) {
-      const verdict = await verifyMediaUrl(probe)
-      if (verdict === 'dead') {
-        throw new Error('the media link it returned is no longer available')
+      let verdict = await verifyMediaUrl(probe)
+      // One retry: a single flaky response should not throw away a good link.
+      if (verdict !== 'ok') {
+        await sleep(1200)
+        verdict = await verifyMediaUrl(probe)
+      }
+      if (verdict === 'dead' || verdict === 'blocked') {
+        throw new Error(
+          verdict === 'blocked'
+            ? 'the media link it returned is being refused'
+            : 'the media link it returned is no longer available'
+        )
       }
     }
     return { upstream, data }
@@ -212,6 +224,13 @@ async function resolveMedia(url, platform) {
     } catch (e) {
       fail('socialdownloader', e)
     }
+  }
+
+  if (lastResult) {
+    // Every upstream produced a link that would not serve. Hand over the last
+    // one anyway: the CDN may be refusing our address only, and a link that
+    // works for the visitor beats an error message.
+    return lastResult
   }
 
   const meaningful = errors.find(
