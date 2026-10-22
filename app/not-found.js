@@ -17,7 +17,9 @@ export default function NotFound() {
         </h1>
 
         <p className="subtitle">
-          That page does not exist. Nothing to download here.
+          That page does not exist.
+          <br />
+          Nothing to download here.
         </p>
 
         <div className="platforms">

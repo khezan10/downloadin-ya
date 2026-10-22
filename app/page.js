@@ -13,9 +13,10 @@ const REVEAL_STAGGER_MS = 90
 
 // The rotating lines the typewriter cycles through.
 const TAGLINES = [
-  'Paste a link from TikTok, Instagram, YouTube, Facebook, X or Threads and get the video straight away.',
+  'Paste a link from TikTok, Instagram, YouTube, Facebook, X, Threads or Pinterest and get the media straight away.',
   'No login, no cookies, no API key — just paste the URL and press download.',
   'HD, SD, MP3 — pick the quality that fits, up to six options per video.',
+  'Pinterest pins come out at full resolution, video or image.',
   'Public posts only.',
 ]
 
@@ -205,7 +206,7 @@ export default function Home() {
               <input
                 type="url"
                 className="url-input"
-                placeholder="Paste a TikTok / Instagram / YouTube / FB / X URL..."
+                placeholder="Paste a TikTok / Instagram / YouTube / FB / X / Pinterest URL..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={loading}
