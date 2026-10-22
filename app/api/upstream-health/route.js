@@ -1,92 +1,59 @@
 import { NextResponse } from 'next/server'
 import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
-
-// A public link that is stable and public on every platform we support.
-const PROBE_URL = 'https://www.instagram.com/reel/DXNQ7uYjqDZ/'
-
-// TikWM only resolves TikTok, so it gets a TikTok link. Probing it with an
-// Instagram URL would report a false "down".
-const TIKTOK_PROBE_URL =
-  'https://www.tiktok.com/@reztechtok/video/7698850425125997831'
+import { UPSTREAMS, getUsage } from '@/lib/upstreams'
+import { getUpstreamUsage } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-/**
- * Probe the download upstreams and report which ones are alive right now.
- *
- * The SaveFrom signer self-heals from most bundle rotations, but not from a
- * change to the signing algorithm itself. This endpoint makes that visible
- * without waiting for a user to report a broken download.
- */
-export async function GET() {
-  const checkedAt = new Date().toISOString()
-  const upstreams = []
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
-  // 1. SaveFrom
+/** Probe one upstream and report whether it is alive right now. */
+async function probe(upstream) {
   const started = Date.now()
-  try {
-    const data = normalizeSaveFrom(await resolveViaSaveFrom(PROBE_URL))
-    upstreams.push({
-      name: 'savefrom',
-      status: 'ok',
-      ms: Date.now() - started,
-      downloads: data.downloads.length,
-      note: data.downloads.map((d) => d.quality).join(', '),
-    })
-  } catch (e) {
-    upstreams.push({
-      name: 'savefrom',
-      status: 'down',
-      ms: Date.now() - started,
-      error: e.message.slice(0, 160),
-    })
-  }
 
-  // 2. TikWM
-  const t2 = Date.now()
   try {
-    const res = await fetch(
-      `https://www.tikwm.com/api/?url=${encodeURIComponent(TIKTOK_PROBE_URL)}`,
-      {
-        headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(20000),
+    if (upstream.id === 'savefrom') {
+      const data = normalizeSaveFrom(await resolveViaSaveFrom(upstream.probeUrl))
+      return {
+        status: 'ok',
+        ms: Date.now() - started,
+        // Every card reports the same outcome word, so the three are directly
+        // comparable. The quality list belongs to the result, not the status.
+        note: data.downloads.length > 0 ? 'resolved' : 'no media returned',
       }
-    )
-    const body = await res.json()
-    upstreams.push({
-      name: 'tikwm',
-      status: res.ok && body.code === 0 ? 'ok' : 'down',
-      ms: Date.now() - t2,
-      note: res.ok ? String(body.msg || '').slice(0, 60) : `HTTP ${res.status}`,
-    })
-  } catch (e) {
-    upstreams.push({
-      name: 'tikwm',
-      status: 'down',
-      ms: Date.now() - t2,
-      error: e.message.slice(0, 160),
-    })
-  }
+    }
 
-  // 3. socialdownloader
-  const t3 = Date.now()
-  try {
+    if (upstream.id === 'tikwm') {
+      const res = await fetch(
+        `https://www.tikwm.com/api/?url=${encodeURIComponent(upstream.probeUrl)}`,
+        { headers: { Accept: 'application/json', 'User-Agent': UA }, signal: AbortSignal.timeout(20000) }
+      )
+      const body = await res.json()
+      const ok = res.ok && body.code === 0
+      return {
+        status: ok ? 'ok' : 'down',
+        ms: Date.now() - started,
+        note: ok ? 'resolved' : String(body.msg || `HTTP ${res.status}`).slice(0, 80),
+      }
+    }
+
+    // socialdownloader
     const res = await fetch('https://www.socialdownloader.space/api/download', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'User-Agent': UA,
         Origin: 'https://www.socialdownloader.space',
         Referer: 'https://www.socialdownloader.space/',
         'Sec-Fetch-Site': 'same-origin',
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Dest': 'empty',
       },
-      body: JSON.stringify({ url: PROBE_URL }),
+      body: JSON.stringify({ url: upstream.probeUrl }),
       signal: AbortSignal.timeout(30000),
     })
     const text = await res.text()
@@ -96,22 +63,67 @@ export async function GET() {
     } catch {
       ok = false
     }
-    upstreams.push({
-      name: 'socialdownloader',
+    return {
       status: res.ok && ok ? 'ok' : 'down',
-      ms: Date.now() - t3,
+      ms: Date.now() - started,
       note: ok ? 'resolved' : `HTTP ${res.status}`,
-    })
+    }
   } catch (e) {
-    upstreams.push({
-      name: 'socialdownloader',
+    return {
       status: 'down',
-      ms: Date.now() - t3,
+      ms: Date.now() - started,
       error: e.message.slice(0, 160),
-    })
+    }
   }
+}
+
+/**
+ * Live status for every download upstream, plus which one is actually serving
+ * traffic right now.
+ *
+ * The visitor-facing "backend monitor" section reads this. The role (primary
+ * vs fallback) is static and comes from lib/upstreams.js; the live status is
+ * probed on request; the share comes from the database so it is the same for
+ * every visitor.
+ */
+export async function GET() {
+  const checkedAt = new Date().toISOString()
+
+  const results = await Promise.all(UPSTREAMS.map(probe))
+  // Pair each probe result with its upstream by position — the probe returns
+  // only the status, not the id.
+  const byId = Object.fromEntries(results.map((r, i) => [UPSTREAMS[i].id, r]))
+
+  const dbUsage = await getUpstreamUsage(50)
+  const memoryUsage = getUsage()
+
+  const upstreams = UPSTREAMS.map((u) => {
+    const live = byId[u.id] || { status: 'down', ms: 0 }
+    const served = dbUsage.usage[u.id] || 0
+    const share = dbUsage.total > 0 ? Math.round((served / dbUsage.total) * 100) : null
+    return {
+      id: u.id,
+      label: u.label,
+      host: u.host,
+      role: u.role,
+      scope: u.scope,
+      note: u.note,
+      status: live.status,
+      ms: live.ms,
+      detail: live.note || live.error || '',
+      served,
+      share,
+      instanceCount: memoryUsage.counts[u.id] || 0,
+    }
+  })
 
   const healthy = upstreams.filter((u) => u.status === 'ok')
+  const activeUpstream =
+    upstreams.find((u) => u.id === memoryUsage.lastUsed) ||
+    upstreams.find((u) => u.role === 'primary' && u.status === 'ok') ||
+    upstreams.find((u) => u.status === 'ok') ||
+    null
+
   return NextResponse.json(
     {
       success: healthy.length > 0,
@@ -119,6 +131,15 @@ export async function GET() {
       healthy: healthy.length,
       total: upstreams.length,
       upstreams,
+      active: activeUpstream
+        ? {
+            id: activeUpstream.id,
+            label: activeUpstream.label,
+            role: activeUpstream.role,
+            since: memoryUsage.lastUsedAt,
+          }
+        : null,
+      sample: dbUsage.total,
     },
     {
       status: healthy.length > 0 ? 200 : 503,

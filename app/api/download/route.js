@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { saveDownload } from '@/lib/db'
 import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
+import { recordUse } from '@/lib/upstreams'
 
 // Three free upstreams. None needs an API key, an account, or a credit card:
 //   1. SaveFrom's signed converter — multi-platform (TikTok, IG, X, Threads,
@@ -48,7 +49,8 @@ export async function POST(request) {
       request.headers.get('x-real-ip') ||
       'unknown'
 
-    const downloadData = await resolveMedia(url, platform)
+    const { upstream, data: downloadData } = await resolveMedia(url, platform)
+    recordUse(upstream)
 
     saveDownload({
       platform,
@@ -56,10 +58,11 @@ export async function POST(request) {
       ip,
       title: downloadData.title,
       thumbnail: downloadData.thumbnail,
+      upstream,
       success: true,
     }).catch((err) => console.error('saveDownload failed:', err?.message || err))
 
-    return NextResponse.json({ success: true, data: downloadData })
+    return NextResponse.json({ success: true, data: { ...downloadData, upstream } })
   } catch (error) {
     console.error('Download error:', error)
     return NextResponse.json(
@@ -101,21 +104,21 @@ async function resolveMedia(url, platform) {
 
   // SaveFrom first — it covers the most platforms and returns quality labels.
   try {
-    return normalizeSaveFrom(await resolveViaSaveFrom(url))
+    return { upstream: 'savefrom', data: normalizeSaveFrom(await resolveViaSaveFrom(url)) }
   } catch (e) {
     errors.push(e.message)
   }
 
   if (platform === 'tiktok') {
     try {
-      return await viaTikwm(url)
+      return { upstream: 'tikwm', data: await viaTikwm(url) }
     } catch (e) {
       errors.push(e.message)
     }
   }
 
   try {
-    return await viaSocialDownloader(url)
+    return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
   } catch (e) {
     errors.push(e.message)
   }
@@ -124,7 +127,7 @@ async function resolveMedia(url, platform) {
   // of JSON. One retry with the same headers clears it.
   try {
     await sleep(1200)
-    return await viaSocialDownloader(url)
+    return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
   } catch (e) {
     errors.push(e.message)
   }
@@ -132,7 +135,7 @@ async function resolveMedia(url, platform) {
   // TikTok can still fall back to the other upstream.
   if (platform === 'tiktok') {
     try {
-      return await viaSocialDownloader(url)
+      return { upstream: 'socialdownloader', data: await viaSocialDownloader(url) }
     } catch (e) {
       errors.push(e.message)
     }

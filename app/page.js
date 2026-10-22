@@ -26,6 +26,7 @@ export default function Home() {
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [recentDownloads, setRecentDownloads] = useState([])
+  const [upstreams, setUpstreams] = useState(null)
   const [revealed, setRevealed] = useState(false)
 
   const titleRef = useRef(null)
@@ -34,6 +35,11 @@ export default function Home() {
 
   useEffect(() => {
     fetchRecentDownloads()
+    fetchUpstreams()
+    // Keep the monitor honest — the upstreams are third parties, so their
+    // status can change between two page loads.
+    const timer = setInterval(fetchUpstreams, 30000)
+    return () => clearInterval(timer)
   }, [])
 
   // Kick off the staggered entrance on the next frame so the initial
@@ -52,6 +58,18 @@ export default function Home() {
       }
     } catch (err) {
       console.error('Failed to fetch recent downloads:', err)
+    }
+  }
+
+  const fetchUpstreams = async () => {
+    try {
+      const res = await fetch('/api/upstream-health', { cache: 'no-store' })
+      const data = await res.json()
+      if (data && Array.isArray(data.upstreams)) {
+        setUpstreams(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch upstream status:', err)
     }
   }
 
@@ -89,6 +107,7 @@ export default function Home() {
 
       setResult(data.data)
       fetchRecentDownloads()
+      fetchUpstreams()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -318,6 +337,100 @@ export default function Home() {
             ))
           )}
         </div>
+      </section>
+
+      {/* Backend monitor — which upstream is live, which is the fallback,
+          and which one is actually serving right now. */}
+      <section className="monitor-section">
+        <header className={`monitor-header ${revealClass}`} {...reveal(7)}>
+          <p className="monitor-eyebrow">backend monitor</p>
+          <h2 className="monitor-title">UPSTREAM STATUS_</h2>
+          <p className="monitor-sub">
+            Every download goes through one of these free resolvers. The first is tried
+            first; the rest pick up the slack if it fails.
+          </p>
+        </header>
+
+        {!upstreams ? (
+          <div className={`monitor-card ${revealClass}`} {...reveal(8)}>
+            <p className="monitor-empty">Probing upstream resolvers...</p>
+          </div>
+        ) : (
+          <>
+            <div className="monitor-grid">
+              {upstreams.upstreams.map((u, i) => (
+                <article
+                  key={u.id}
+                  className={`monitor-card ${revealClass}`}
+                  {...reveal(8 + i)}
+                >
+                  <div className="monitor-card-top">
+                    <span className={`monitor-role monitor-role--${u.role}`}>
+                      {u.role === 'primary' ? 'PRIMARY' : 'FALLBACK'}
+                    </span>
+                    <span
+                      className={`monitor-status monitor-status--${u.status}`}
+                    >
+                      <span className="monitor-dot" aria-hidden="true" />
+                      {u.status === 'ok' ? 'ONLINE' : 'OFFLINE'}
+                    </span>
+                  </div>
+
+                  <h3 className="monitor-name">{u.label}</h3>
+                  <p className="monitor-host">{u.host}</p>
+
+                  <dl className="monitor-facts">
+                    <div>
+                      <dt>scope</dt>
+                      <dd>{u.scope}</dd>
+                    </div>
+                    <div>
+                      <dt>latency</dt>
+                      <dd>{u.status === 'ok' ? `${u.ms} ms` : '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>serving</dt>
+                      <dd>
+                        {u.share === null
+                          ? 'no traffic yet'
+                          : `${u.share}% of last ${upstreams.sample}`}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <p className="monitor-note">
+                    {u.status === 'ok' ? u.detail : u.detail || 'no response'}
+                  </p>
+
+                  <div
+                    className="monitor-bar"
+                    role="img"
+                    aria-label={
+                      u.share === null
+                        ? `${u.label}: no traffic yet`
+                        : `${u.label} served ${u.share}% of the last ${upstreams.sample} downloads`
+                    }
+                  >
+                    <span style={{ width: `${u.share || 0}%` }} />
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className={`monitor-summary ${revealClass}`} {...reveal(11)}>
+              <span className="monitor-summary-label">currently serving</span>
+              <span className="monitor-summary-value">
+                {upstreams.active ? upstreams.active.label : 'none'}
+              </span>
+              <span className="monitor-summary-meta">
+                {upstreams.healthy}/{upstreams.total} online
+                {upstreams.active?.since
+                  ? ` · last request ${formatTime(upstreams.active.since)}`
+                  : ''}
+              </span>
+            </div>
+          </>
+        )}
       </section>
 
       {/* Footer */}

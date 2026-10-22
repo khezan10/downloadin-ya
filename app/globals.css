@@ -343,7 +343,7 @@ body {
 /* Recent downloads section */
 .recent-section {
   /* Extra bottom room: the footer is fixed, so the last card must clear it. */
-  padding: 60px 24px 160px;
+  padding: 60px 24px 56px;
   max-width: 920px;
   margin: 0 auto;
 }
@@ -427,6 +427,252 @@ body {
   color: var(--muted);
   text-align: center;
   padding: 8px 0;
+}
+
+/* ── Backend monitor ────────────────────────────────────────────────────
+   Same terminal language as the rest of the site: hairline borders, a card
+   fill one step off the canvas, lime reserved for live state. */
+
+.monitor-section {
+  padding: 0 24px 120px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.monitor-header {
+  margin-bottom: 24px;
+}
+
+.monitor-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.32em;
+  color: var(--lime);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.monitor-eyebrow::before {
+  content: "▓▒░ ";
+}
+
+.monitor-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.monitor-sub {
+  margin-top: 10px;
+  max-width: 58ch;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.monitor-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.monitor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color 0.3s ease;
+}
+
+.monitor-card:hover {
+  border-color: rgba(180, 255, 43, 0.35);
+}
+
+/* The card that is actually taking traffic gets a lime edge. */
+.monitor-card:has(.monitor-role--primary) {
+  border-color: rgba(180, 255, 43, 0.3);
+}
+
+.monitor-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.monitor-role {
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.monitor-role--primary {
+  color: var(--lime);
+  border: 1px solid rgba(180, 255, 43, 0.45);
+  background: rgba(180, 255, 43, 0.08);
+}
+
+.monitor-role--fallback {
+  color: var(--muted);
+  border: 1px dashed var(--line);
+}
+
+.monitor-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.monitor-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.monitor-status--ok {
+  color: var(--lime);
+}
+
+/* A slow pulse so "online" reads as alive, not just coloured. */
+.monitor-status--ok .monitor-dot {
+  animation: monitorPulse 2.4s ease-in-out infinite;
+}
+
+.monitor-status--down {
+  color: #ff6b6b;
+}
+
+.monitor-status--down .monitor-dot {
+  animation: monitorBlink 1.2s steps(1) infinite;
+}
+
+.monitor-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.monitor-host {
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.monitor-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.monitor-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.75rem;
+}
+
+.monitor-facts dt {
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+}
+
+.monitor-facts dd {
+  color: var(--ink);
+  text-align: right;
+  /* The scope value is the only one that can wrap. The strings are kept
+     short enough to fit one line, and this reserves that line plus a small
+     margin so the rows below stay aligned across all three cards. */
+  min-height: 1.9em;
+}
+
+.monitor-facts > div:not(:first-child) dd {
+  min-height: 0;
+}
+
+.monitor-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+.monitor-bar {
+  height: 3px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.monitor-bar span {
+  display: block;
+  height: 100%;
+  background: var(--lime);
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.monitor-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.monitor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-top: 14px;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--lime);
+  border-radius: 12px;
+}
+
+.monitor-summary-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.monitor-summary-value {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--lime);
+}
+
+.monitor-summary-meta {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+@keyframes monitorPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(180, 255, 43, 0.5); }
+  50% { opacity: 0.65; box-shadow: 0 0 0 5px rgba(180, 255, 43, 0); }
+}
+
+@keyframes monitorBlink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0.25; }
 }
 
 /* Loading animation */
@@ -554,7 +800,25 @@ body {
   }
 
   .recent-section {
-    padding: 40px 20px 140px;
+    padding: 40px 20px 44px;
+  }
+
+  .monitor-section {
+    padding: 0 20px 140px;
+  }
+
+  .monitor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .monitor-summary-meta {
+    margin-left: 0;
   }
 
   .footer {
@@ -594,7 +858,11 @@ body {
   }
 
   .recent-section {
-    padding: 72px 32px 160px;
+    padding: 72px 32px 56px;
+  }
+
+  .monitor-section {
+    padding: 0 32px 160px;
   }
 
   .title {
