@@ -23,6 +23,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   site and its three resolvers every six hours. When one of them stops
   answering it opens a single tracking issue, updates that issue on every
   later failure, and closes it once everything answers again.
+- **The database is cleaned daily.** A Vercel Cron runs at 00:00 UTC and
+  deletes download records older than 30 days, so the MongoDB collection does
+  not grow without bound.
 
 ## [1.0.0] — 2026-10-22
 
