@@ -151,8 +151,17 @@ async function resolveMedia(url, platform) {
 // --- Upstream 1: TikWM (TikTok) -------------------------------------------
 
 async function viaTikwm(url) {
+  // TikWM answers with an empty body to callers that do not look like a
+  // browser — which includes serverless egress. Sending a Referer and
+  // Accept-Language is what makes it respond. The health probe uses the same
+  // header set, so the monitor reflects whether this fallback really works.
   const response = await fetch(`${TIKWM_ENDPOINT}?url=${encodeURIComponent(url)}`, {
-    headers: { Accept: 'application/json', 'User-Agent': UA },
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'User-Agent': UA,
+      Referer: 'https://www.tikwm.com/',
+    },
     signal: AbortSignal.timeout(20000),
   })
 
@@ -160,7 +169,16 @@ async function viaTikwm(url) {
     throw new Error(`Upstream returned HTTP ${response.status}. Please try again shortly.`)
   }
 
-  const data = await response.json()
+  const text = await response.text()
+  if (!text.trim()) {
+    throw new Error('TikWM did not answer this request.')
+  }
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error('TikWM returned an unexpected response.')
+  }
   if (data.code !== 0 || !data.data) {
     throw new Error(
       data.msg ||
