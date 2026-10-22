@@ -8,8 +8,8 @@ quality options, plus MP3 audio. No login, no cookies, no API key.
 [![Release](https://img.shields.io/github/v/release/khezan10/downloadin-ya.svg)](https://github.com/khezan10/downloadin-ya/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-b4ff2b.svg)](LICENSE)
 
-**Live:** https://downloadin-ya.vercel.app
-**Custom domain:** https://downloadin.mzg.my.id
+**Live:** https://downloadin.mzg.my.id
+**Vercel alias:** https://downloadin-ya.vercel.app
 
 ## Supported Platforms
 
