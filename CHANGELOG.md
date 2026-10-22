@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Single author across the whole history.** Every commit is now authored and
+  committed by `Khezan Amartya <khezanamartya@gmail.com>`, the address that is
+  verified on the `khezan10` account, so GitHub attributes all of them to that
+  account instead of leaving them as an unlinked author. The `Co-authored-by:`
+  and `Signed-off-by:` trailers that put bots into the contributor list were
+  dropped, and the original commit dates were kept, so the history still reads
+  as a timeline rather than a single burst.
+
 ## [1.0.0] — 2026-10-22
 
 The first stable release. Seven platforms, three free upstreams, a test suite,
