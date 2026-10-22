@@ -22,6 +22,18 @@ Live now:
 
 Coming soon: Pinterest, Pixiv
 
+## API
+
+`POST /api/download` with `{ "url": "<social url>" }`.
+
+Optional `upstream` field (or `?upstream=` query param) forces one specific
+resolver — useful for verifying that a fallback still works when the primary
+is healthy and never gets used. Forced requests are diagnostics: they are not
+written to the activity log and do not count towards the serving share.
+
+`GET /api/upstream-health` reports each upstream's live status, its role
+(primary or fallback) and the share of recent downloads it served.
+
 ## Features
 
 - HD download, no watermark (plus a with-watermark fallback)

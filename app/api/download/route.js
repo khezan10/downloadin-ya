@@ -59,17 +59,23 @@ export async function POST(request) {
     const { upstream, data: downloadData } = forced
       ? await resolveWith(url, platform, forced)
       : await resolveMedia(url, platform)
-    recordUse(upstream)
 
-    saveDownload({
-      platform,
-      originalUrl: url,
-      ip,
-      title: downloadData.title,
-      thumbnail: downloadData.thumbnail,
-      upstream,
-      success: true,
-    }).catch((err) => console.error('saveDownload failed:', err?.message || err))
+    // A forced upstream is a diagnostic request, not real traffic. Keep it
+    // out of the public activity log and out of the serving-share numbers, so
+    // what visitors see stays honest.
+    if (!forced) {
+      recordUse(upstream)
+
+      saveDownload({
+        platform,
+        originalUrl: url,
+        ip,
+        title: downloadData.title,
+        thumbnail: downloadData.thumbnail,
+        upstream,
+        success: true,
+      }).catch((err) => console.error('saveDownload failed:', err?.message || err))
+    }
 
     return NextResponse.json({ success: true, data: { ...downloadData, upstream } })
   } catch (error) {
