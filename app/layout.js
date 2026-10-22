@@ -1,9 +1,12 @@
 import './globals.css'
+import { SITE_URL, REPO_URL } from '@/lib/site'
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Downloadin Ya — Social Media Video Downloader',
   description:
     'Download videos and images from TikTok, Instagram, YouTube, Facebook, X (Twitter), Threads and Pinterest. No login, no cookies, no API key.',
+  applicationName: 'Downloadin Ya',
   keywords: [
     'video downloader',
     'social media video downloader',
@@ -15,13 +18,39 @@ export const metadata = {
     'twitter downloader',
     'x downloader',
     'threads downloader',
+    'pinterest downloader',
+    'pinterest video downloader',
+    'pinterest image downloader',
   ],
-  authors: [{ name: 'Khezan Amartya' }],
+  authors: [{ name: 'Khezan Amartya', url: REPO_URL }],
+  creator: 'Khezan Amartya',
+  alternates: { canonical: '/' },
   openGraph: {
+    type: 'website',
+    url: SITE_URL,
+    siteName: 'Downloadin Ya',
     title: 'Downloadin Ya — Social Media Video Downloader',
     description:
-      'Download videos from TikTok, Instagram, YouTube, Facebook, X (Twitter) and Threads. No login, no cookies.',
-    type: 'website',
+      'Download videos and images from TikTok, Instagram, YouTube, Facebook, X, Threads and Pinterest. No login, no cookies, no API key.',
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'Downloadin Ya — social media video downloader',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Downloadin Ya — Social Media Video Downloader',
+    description:
+      'Download videos and images from TikTok, Instagram, YouTube, Facebook, X, Threads and Pinterest.',
+    images: ['/og.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 

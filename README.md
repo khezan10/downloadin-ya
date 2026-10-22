@@ -4,6 +4,10 @@ A social media video downloader. Paste a link from TikTok, Instagram, YouTube,
 Facebook, X (Twitter), Threads or Pinterest and get the media — up to six
 quality options, plus MP3 audio. No login, no cookies, no API key.
 
+[![CI](https://github.com/khezan10/downloadin-ya/actions/workflows/ci.yml/badge.svg)](https://github.com/khezan10/downloadin-ya/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/khezan10/downloadin-ya.svg)](https://github.com/khezan10/downloadin-ya/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-b4ff2b.svg)](LICENSE)
+
 **Live:** https://downloadin-ya.vercel.app
 **Custom domain:** https://downloadin.mzg.my.id
 
@@ -40,15 +44,26 @@ written to the activity log and do not count towards the serving share.
 `GET /api/upstream-health` reports each upstream's live status, its role
 (primary or fallback) and the share of recent downloads it served.
 
+`GET /api/health` is a liveness probe: uptime and whether the optional
+database is reachable.
+
+Download requests are limited to 20 per minute per address; a request over the
+limit gets `429` with a `Retry-After` header.
+
 ## Features
 
 - HD download, no watermark (plus a with-watermark fallback)
 - MP3 audio download
 - Title, author, duration, view and like counts
 - Recent-downloads activity log with masked IP addresses
+- **Live upstream panel** — which resolver is primary, which are fallbacks,
+  whether each is online, and what share of recent downloads it served
+- **Direct CDN links** — the upstreams' own proxy routes are unwrapped, so the
+  file is served by the CDN rather than through a third-party proxy
 - Terminal-style dark theme with lime accent
 - Staggered entrance animation matching the Zanara landing page
 - Respects `prefers-reduced-motion`
+- Rate limited, so one visitor cannot spend the shared upstreams' quota
 
 ## Tech Stack
 
@@ -61,12 +76,12 @@ written to the activity log and do not count towards the serving share.
     bundle (`lib/savefrom.js`), so no key is needed. This is a client of a
     public web API, not a documented one, so it can change without notice.
   - `TikWM` (`https://www.tikwm.com/api/`) — TikTok, ~1 request/second per client IP
-  - `socialdownloader.space` — Instagram, X, Threads (public instance of
+  - `socialdownloader.space` — Instagram, X, Threads, Pinterest (public instance of
     [Vette1123/social-media-downloader](https://github.com/Vette1123/social-media-downloader), AGPL-3.0)
 
 ## About the free upstreams
 
-Neither upstream needs a key, a signup, or a credit card, and neither charges per
+No upstream needs a key, a signup, or a credit card, and none charges per
 request. TikWM's free tier allows roughly **1 request per second**, applied per
 client IP — so one Vercel function can serve many users at once.
 
@@ -109,6 +124,15 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### Checks
+
+```bash
+npm run check      # lint + unit tests + production build
+```
+
+`npm run lint` and `npm test` run on their own too. The test suite uses
+Node's built-in runner, so it needs no extra dependency.
+
 ### Build & Deploy
 
 ```bash
@@ -122,14 +146,35 @@ The value must be the **plaintext connection string** — Vercel encrypts it for
 
 ```
 app/
-  api/download/route.js   TikTok resolve via TikWM, saves to MongoDB
-  api/recent/route.js     last 5 downloads, never cached
-  page.js                 hero, form, result, activity log
-  globals.css             theme + staggered reveal animation
+  api/download/route.js     resolve a link, verify the link, save to MongoDB
+  api/recent/route.js       last 5 downloads, never cached
+  api/upstream-health/      live status of each resolver
+  api/health/               liveness probe
+  error.js                  error boundary
+  not-found.js              404 page
+  robots.js / sitemap.js    metadata routes
+  page.js                   hero, form, result, activity log, upstream panel
+  globals.css               theme + staggered reveal animation
 lib/
-  db.js                   saveDownload / getRecentDownloads
-  mongodb.js              optional MongoDB connection
+  platform.js               hostname-based platform detection
+  pinterest.js              Pinterest URL normalisation
+  sdd.js                    unwrap the multi-platform upstream's proxy URLs
+  savefrom.js               signed converter client + URL unwrapping
+  tikwm.js                  TikWM client with a header ladder
+  upstreams.js              the upstream registry (role, scope, probe URL)
+  rate-limit.js             per-address rate limiter
+  db.js / mongodb.js        optional MongoDB connection
+tests/                      unit tests (node --test, no dependencies)
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: `npm run check` has
+to pass, and a new platform needs a public URL that resolves plus a test.
+
+## Security
+
+Report a vulnerability privately — see [SECURITY.md](SECURITY.md).
 
 ## License
 

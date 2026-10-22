@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest a platform, a quality option, or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New platforms are welcome. Please include a public post URL that works
+        today — that is what gets the feature merged, not a description of it.
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform is this about?
+    validations:
+      required: true
+
+  - type: textarea
+    id: link
+    attributes:
+      label: A public post URL that works right now
+      description: A link the current site cannot handle, so the new support can be tested.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What should it do?

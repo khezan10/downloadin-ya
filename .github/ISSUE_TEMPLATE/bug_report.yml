@@ -1,0 +1,48 @@
+name: Bug report
+description: Something on the site does not work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it. The most useful bug reports include a link
+        that reproduces the problem — the site only needs public post URLs.
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Which site was the link from?
+      placeholder: TikTok, Instagram, YouTube, Facebook, X, Threads, Pinterest
+    validations:
+      required: true
+
+  - type: textarea
+    id: link
+    attributes:
+      label: Link
+      description: The public post URL you pasted.
+      placeholder: https://www.tiktok.com/@user/video/1234567890
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: input
+    id: error
+    attributes:
+      label: Error message
+      description: The exact text of any error, if one was shown.
+      placeholder: "This link could not be resolved."
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Browser, device, anything else that might matter.

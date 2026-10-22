@@ -6,6 +6,7 @@ import { fetchTikwm } from '@/lib/tikwm'
 import { SDD_BASE, unwrapSddProxy, toPinterestOriginal } from '@/lib/sdd'
 import { normalizePinterestUrl, isPinterestUrl } from '@/lib/pinterest'
 import { detectPlatform, SUPPORTED_PLATFORMS } from '@/lib/platform'
+import { checkRateLimit, clientKey } from '@/lib/rate-limit'
 
 // Three free upstreams. None needs an API key, an account, or a credit card:
 //   1. SaveFrom's signed converter — multi-platform (TikTok, IG, X, Threads,
@@ -19,7 +20,6 @@ import { detectPlatform, SUPPORTED_PLATFORMS } from '@/lib/platform'
 // Order matters: SaveFrom resolves the most platforms and the most qualities,
 // so it goes first. The others are fallbacks for when its signature goes stale.
 
-const TIKWM_ENDPOINT = 'https://www.tikwm.com/api/'
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
@@ -40,6 +40,22 @@ export async function POST(request) {
     const forced = String(body?.upstream || request.nextUrl?.searchParams?.get('upstream') || '')
       .trim()
       .toLowerCase()
+
+    // The upstreams are free and shared, so one address must not be able to
+    // spend everyone else's quota.
+    const limit = checkRateLimit(clientKey(request))
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Too many requests. Try again in ${limit.retryAfter} seconds.`,
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limit.retryAfter) },
+        }
+      )
+    }
 
     const platform = detectPlatform(url)
     if (!SUPPORTED_PLATFORMS.includes(platform)) {

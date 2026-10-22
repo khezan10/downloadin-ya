@@ -29,7 +29,7 @@ async function probe(upstream) {
     if (upstream.id === 'tikwm') {
       // Same helper the download route uses, so "ONLINE" here means the
       // fallback genuinely works from this network.
-      const { body, variant } = await fetchTikwm(upstream.probeUrl)
+      const { variant } = await fetchTikwm(upstream.probeUrl)
       return {
         status: 'ok',
         ms: Date.now() - started,

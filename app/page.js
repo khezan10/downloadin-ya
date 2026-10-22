@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import IdleAnimations from '@/components/IdleAnimations'
+import { detectPlatform, SUPPORTED_PLATFORMS } from '@/lib/platform'
 import Typewriter from '@/components/Typewriter'
 
 // Entrance animation: fade + rise + deblur, staggered per element.
@@ -450,20 +451,14 @@ export default function Home() {
   )
 }
 
+/**
+ * Whether the form should accept this link.
+ *
+ * Uses the same detector as the API, so the two can never disagree about
+ * which platforms exist. The old version matched on substrings and did not
+ * even list Pinterest, so a perfectly good pin link was rejected before it
+ * ever reached the resolver.
+ */
 export function isSupportedUrl(url) {
-  const u = String(url).toLowerCase()
-  return (
-    u.includes('tiktok.com') ||
-    u.includes('instagram.com') ||
-    u.includes('instagr.am') ||
-    u.includes('youtube.com') ||
-    u.includes('youtu.be') ||
-    u.includes('facebook.com') ||
-    u.includes('fb.watch') ||
-    u.includes('twitter.com') ||
-    u.includes('x.com') ||
-    u.includes('t.co') ||
-    u.includes('threads.net') ||
-    u.includes('threads.com')
-  )
+  return SUPPORTED_PLATFORMS.includes(detectPlatform(url))
 }
