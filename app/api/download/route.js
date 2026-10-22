@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { saveDownload } from '@/lib/db'
 import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
 import { recordUse } from '@/lib/upstreams'
+import { fetchTikwm } from '@/lib/tikwm'
 
 // Three free upstreams. None needs an API key, an account, or a credit card:
 //   1. SaveFrom's signed converter — multi-platform (TikTok, IG, X, Threads,
@@ -151,42 +152,11 @@ async function resolveMedia(url, platform) {
 // --- Upstream 1: TikWM (TikTok) -------------------------------------------
 
 async function viaTikwm(url) {
-  // TikWM answers with an empty body to callers that do not look like a
-  // browser — which includes serverless egress. Sending a Referer and
-  // Accept-Language is what makes it respond. The health probe uses the same
-  // header set, so the monitor reflects whether this fallback really works.
-  const response = await fetch(`${TIKWM_ENDPOINT}?url=${encodeURIComponent(url)}`, {
-    headers: {
-      Accept: 'application/json, text/plain, */*',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'User-Agent': UA,
-      Referer: 'https://www.tikwm.com/',
-    },
-    signal: AbortSignal.timeout(20000),
-  })
+  // The header ladder lives in lib/tikwm.js so the health probe exercises
+  // exactly the same request this fallback uses.
+  const { body } = await fetchTikwm(url)
+  const video = body.data
 
-  if (!response.ok) {
-    throw new Error(`Upstream returned HTTP ${response.status}. Please try again shortly.`)
-  }
-
-  const text = await response.text()
-  if (!text.trim()) {
-    throw new Error('TikWM did not answer this request.')
-  }
-  let data
-  try {
-    data = JSON.parse(text)
-  } catch {
-    throw new Error('TikWM returned an unexpected response.')
-  }
-  if (data.code !== 0 || !data.data) {
-    throw new Error(
-      data.msg ||
-        'Could not fetch this video. Make sure the link is correct and the video is public.'
-    )
-  }
-
-  const video = data.data
   const downloads = []
 
   if (video.play) {

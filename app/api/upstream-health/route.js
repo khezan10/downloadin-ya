@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { resolveViaSaveFrom, normalizeSaveFrom } from '@/lib/savefrom'
 import { UPSTREAMS, getUsage } from '@/lib/upstreams'
 import { getUpstreamUsage } from '@/lib/db'
+import { fetchTikwm } from '@/lib/tikwm'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -26,62 +27,14 @@ async function probe(upstream) {
     }
 
     if (upstream.id === 'tikwm') {
-      // TikWM is picky about the caller. Try a plain request first, then a
-      // browser-shaped one, and report whichever gets through.
-      const attempts = [
-        { Accept: 'application/json', 'User-Agent': UA },
-        {
-          Accept: 'application/json, text/plain, */*',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'User-Agent': UA,
-          Referer: 'https://www.tikwm.com/',
-        },
-      ]
-
-      let last = null
-      for (const headers of attempts) {
-        try {
-          const res = await fetch(
-            `https://www.tikwm.com/api/?url=${encodeURIComponent(upstream.probeUrl)}`,
-            { headers, signal: AbortSignal.timeout(20000) }
-          )
-          const text = await res.text()
-          if (!text.trim()) {
-            last = {
-              status: 'down',
-              ms: Date.now() - started,
-              error: `blocked from this network (HTTP ${res.status}, empty body)`,
-            }
-            continue
-          }
-          let body
-          try {
-            body = JSON.parse(text)
-          } catch {
-            last = {
-              status: 'down',
-              ms: Date.now() - started,
-              error: `HTTP ${res.status}, non-JSON response`,
-            }
-            continue
-          }
-          if (res.ok && body.code === 0) {
-            return { status: 'ok', ms: Date.now() - started, note: 'resolved' }
-          }
-          last = {
-            status: 'down',
-            ms: Date.now() - started,
-            error: String(body.msg || `HTTP ${res.status}`).slice(0, 90),
-          }
-        } catch (e) {
-          last = {
-            status: 'down',
-            ms: Date.now() - started,
-            error: e.message.slice(0, 90),
-          }
-        }
+      // Same helper the download route uses, so "ONLINE" here means the
+      // fallback genuinely works from this network.
+      const { body, variant } = await fetchTikwm(upstream.probeUrl)
+      return {
+        status: 'ok',
+        ms: Date.now() - started,
+        note: `resolved (${variant})`,
       }
-      return last
     }
 
     // socialdownloader
