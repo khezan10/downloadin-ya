@@ -3,7 +3,7 @@ import './globals.css'
 export const metadata = {
   title: 'Downloadin Ya — Social Media Video Downloader',
   description:
-    'Download videos from TikTok, Instagram, YouTube, Facebook, X (Twitter) and Threads. No login, no cookies, no API key. Pinterest coming soon.',
+    'Download videos and images from TikTok, Instagram, YouTube, Facebook, X (Twitter), Threads and Pinterest. No login, no cookies, no API key.',
   keywords: [
     'video downloader',
     'social media video downloader',
