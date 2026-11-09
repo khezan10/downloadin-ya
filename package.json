@@ -12,8 +12,8 @@
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
-    "mongodb": "^7.7.0",
-    "next": "^16.4.2",
+    "mongodb": "^7.8.0",
+    "next": "^16.4.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
